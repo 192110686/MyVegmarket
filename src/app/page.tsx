@@ -21,7 +21,7 @@ export default function Home() {
                 </span>
 
                 <h1 className="text-white text-6xl md:text-8xl font-extrabold leading-[1.05] tracking-tight">
-                  Your Market Price <br /> Partner in Dubai
+                  Veg <br /> Partner in Dubai
                 </h1>
 
                 <p className="text-white/90 text-lg md:text-xl font-medium max-w-2xl leading-relaxed">
