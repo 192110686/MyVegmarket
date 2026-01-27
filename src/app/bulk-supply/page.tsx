@@ -1,6 +1,51 @@
 import Link from "next/link";
 
 export default function BulkSupplyPage() {
+  const features = [
+    {
+      title: "Wholesale Procurement",
+      desc: "Daily sourcing directly from trusted suppliers.",
+      icon: "inventory_2",
+    },
+    {
+      title: "Reliable Logistics",
+      desc: "Planned delivery with freshness protection across Dubai.",
+      icon: "local_shipping",
+    },
+    {
+      title: "Quality Assurance",
+      desc: "Sorting, grading, packing, and quick replacements if needed.",
+      icon: "verified",
+    },
+  ];
+
+  const steps = [
+    {
+      step: "01",
+      title: "Send Requirement",
+      icon: "edit_note",
+      desc: "Share items, quantity, and delivery date.",
+    },
+    {
+      step: "02",
+      title: "We Quote & Confirm",
+      icon: "request_quote",
+      desc: "We send the best rate and confirm fast.",
+    },
+    {
+      step: "03",
+      title: "Sourcing & QC",
+      icon: "fact_check",
+      desc: "We source fresh stock and check quality.",
+    },
+    {
+      step: "04",
+      title: "Delivery & Support",
+      icon: "support_agent",
+      desc: "We deliver and stay available for support.",
+    },
+  ];
+
   return (
     <main className="bg-[#f6f8f7] min-h-screen px-6 lg:px-20 pt-10 pb-24">
       <div className="max-w-[1200px] mx-auto">
@@ -9,7 +54,9 @@ export default function BulkSupplyPage() {
           <Link className="hover:text-[#1db954]" href="/">
             Home
           </Link>
-          <span className="material-symbols-outlined text-base">chevron_right</span>
+          <span className="material-symbols-outlined text-base">
+            chevron_right
+          </span>
           <span className="text-[#111713] font-bold">Bulk Supply</span>
         </div>
 
@@ -20,8 +67,8 @@ export default function BulkSupplyPage() {
               Bulk Supply & Sourcing
             </h1>
             <p className="text-lg text-[#648770] font-medium mt-3 leading-8">
-              Scale your procurement with reliable wholesale sourcing, quality checks,
-              and doorstep delivery across the UAE.
+              Reliable bulk sourcing with quality checks and delivery across
+              Dubai.
             </p>
           </div>
 
@@ -36,23 +83,7 @@ export default function BulkSupplyPage() {
 
         {/* 3 Feature Cards */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-14">
-          {[
-            {
-              title: "Wholesale Procurement",
-              desc: "Daily sourcing from Al Aweer and verified farms with transparent pricing.",
-              icon: "inventory_2",
-            },
-            {
-              title: "Cold Chain Delivery",
-              desc: "Multi-stop logistics with temperature control to protect freshness.",
-              icon: "local_shipping",
-            },
-            {
-              title: "Quality Assurance",
-              desc: "Sorting, grading, packaging and replacements for damaged items.",
-              icon: "verified",
-            },
-          ].map((x) => (
+          {features.map((x) => (
             <div
               key={x.title}
               className="bg-white rounded-3xl border border-[#e0e8e3] shadow-sm p-7"
@@ -80,12 +111,7 @@ export default function BulkSupplyPage() {
           </p>
 
           <div className="grid grid-cols-1 md:grid-cols-4 gap-5">
-            {[
-              { step: "01", title: "Send Requirement", icon: "edit_note" },
-              { step: "02", title: "We Quote & Confirm", icon: "request_quote" },
-              { step: "03", title: "Sourcing & QC", icon: "fact_check" },
-              { step: "04", title: "Delivery & Support", icon: "support_agent" },
-            ].map((s) => (
+            {steps.map((s) => (
               <div
                 key={s.step}
                 className="rounded-2xl bg-[#f0f4f2] border border-[#e0e8e3] p-5"
@@ -100,7 +126,7 @@ export default function BulkSupplyPage() {
                 </div>
                 <p className="text-lg font-black text-[#111713]">{s.title}</p>
                 <p className="text-[#648770] font-medium mt-2 text-sm leading-6">
-                  Fast, reliable workflow tailored for UAE business supply.
+                  {s.desc}
                 </p>
               </div>
             ))}
@@ -117,7 +143,9 @@ export default function BulkSupplyPage() {
             </Link>
 
             <a
-              href="https://wa.me/"
+              href="https://wa.me/917010220771?text=Hi%20MyVegMarket%2C%20I%20need%20a%20bulk%20supply%20quote."
+              target="_blank"
+              rel="noreferrer"
               className="flex-1 h-12 rounded-full bg-white border border-[#1db954] text-[#1db954] font-bold flex items-center justify-center gap-2 hover:bg-[#1db954]/5"
             >
               <span className="material-symbols-outlined">forum</span>
