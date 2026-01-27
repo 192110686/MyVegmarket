@@ -259,24 +259,19 @@ export const PRODUCTS: Product[] = [
     about:
       "Locally sourced brown eggs with stable daily availability—perfect for bakeries, cafes, and breakfast operations.",
   },
-  {
-    id: "eggs-white-uae",
-    name: "White Eggs (UAE)",
-    subtitle: "Daily Supply • 30 pcs Tray",
-    category: "eggs",
-    origin: "UAE",
-    type: "Regular",
-    unit: "Tray",
-    marketAvg: 17,
-    myPrice: 14.75,
-    image:
-      "https://commons.wikimedia.org/wiki/Special:FilePath/Eggs_in_a_basket.jpg",
-    badgeColor: "bg-slate-700",
-    packaging: "30 pcs Tray",
-    freshness: "Daily Collection",
-    about:
-      "Cost-effective white eggs for bulk kitchens and catering. Consistent weight and reliable supply.",
-  },
+ {
+  id: "white-eggs-uae",
+  name: "White Eggs (UAE)",
+  subtitle: "Daily Supply • 30 pcs Tray",
+  category: "eggs",
+  origin: "UAE",
+  type: "Regular",
+  unit: "Tray",
+  marketAvg: 0,
+  myPrice: 0,
+  image: "https://images.unsplash.com/photo-1587486912758-4367d2017d6c?auto=format&fit=crop&w=1600&q=80",
+  badgeColor: "bg-neutral-700",
+},
   {
     id: "quail-eggs",
     name: "Quail Eggs",
