@@ -66,56 +66,69 @@ export default function Home() {
                 Browse all →
               </Link>
             </div>
+<CategoryRow
+  items={[
+    {
+      key: "vegetables",
+      title: "Fresh Vegetables",
+      subtitle: "",
+      href: "/products/vegetables",
+      img: "https://images.unsplash.com/photo-1540420773420-3366772f4999?auto=format&fit=crop&w=1400&q=80",
+      fallbackImg:
+        "https://images.unsplash.com/photo-1542838132-92c53300491e?auto=format&fit=crop&w=1400&q=80",
+    },
+    {
+  key: "fruits",
+  title: "Fresh Fruits",
+  subtitle: "",
+  href: "/products/fruits",
+  img: "https://images.unsplash.com/photo-1519996529931-28324d5a630e?auto=format&fit=crop&w=1400&q=80",
+  fallbackImg:
+    "https://images.unsplash.com/photo-1573246123716-6b1782bfc499?auto=format&fit=crop&w=1400&q=80",
+},
+    {
+      key: "spices",
+      title: "Spices",
+      subtitle: "",
+      href: "/products/spices",
+      img: "https://images.unsplash.com/photo-1596040033229-a9821ebd058d?auto=format&fit=crop&w=1400&q=80",
+      fallbackImg:
+        "https://images.unsplash.com/photo-1615485737651-580c9159c89a?auto=format&fit=crop&w=1400&q=80",
+    },
+{
+  key: "nuts",
+  title: "Nuts",
+  subtitle: "",
+  href: "/products/nuts",
+  // mixed nuts + raisins (dry fruits mix)
+  img: "https://images.unsplash.com/photo-1633168850968-76be3bb0a2fc?auto=format&fit=crop&w=1400&q=80",
+  // clean nuts bowl fallback
+  fallbackImg: "https://images.unsplash.com/photo-1603046891288-5ae31f3e1dae?auto=format&fit=crop&w=1400&q=80",
+},
 
-            <CategoryRow
-              items={[
-                {
-                  key: "vegetables",
-                  title: "Fresh Vegetables",
-                  subtitle: "",
-                  href: "/products/vegetables",
-                  img: "https://source.unsplash.com/1200x900/?vegetables,fresh&sig=21",
-                },
-                {
-                  key: "fruits",
-                  title: "Fresh Fruits",
-                  subtitle: "",
-                  href: "/products/fruits",
-                  img: "https://source.unsplash.com/1200x900/?fruits,seasonal&sig=22",
-                },
-                {
-                  key: "spices",
-                  title: "Spices",
-                  subtitle: "",
-                  href: "/products/spices",
-                  img: "https://source.unsplash.com/1200x900/?spices,masala&sig=23",
-                },
-                {
-                  key: "nuts",
-                  title: "Nuts",
-                  subtitle: "",
-                  href: "/products/nuts",
-                  img: "https://source.unsplash.com/1200x900/?nuts,dryfruits&sig=24",
-                },
-                {
-                  key: "eggs",
-                  title: "Fresh Eggs",
-                  subtitle: "",
-                  href: "/products/eggs",
-                  img: "https://source.unsplash.com/1200x900/?eggs,tray&sig=25",
-                },
-                {
-                  key: "oils",
-                  title: "Fresh Oils",
-                  subtitle: "",
-                  href: "/products/oils",
-                  img: "https://source.unsplash.com/1200x900/?olive-oil,cooking&sig=26",
-                },
-              ]}
-            />
+    {
+      key: "eggs",
+      title: "Fresh Eggs",
+      subtitle: "",
+      href: "/products/eggs",
+      img: "https://images.unsplash.com/photo-1587486913049-53fc88980cfc?auto=format&fit=crop&w=1400&q=80",
+      fallbackImg:
+        "https://images.unsplash.com/photo-1587486913049-53fc88980cfc?auto=format&fit=crop&w=1400&q=80",
+    },
+    {
+      key: "oils",
+      title: "Fresh Oils",
+      subtitle: "",
+      href: "/products/oils",
+      img: "https://images.unsplash.com/photo-1474979266404-7eaacbcd87c5?auto=format&fit=crop&w=1400&q=80",
+      fallbackImg:
+        "https://images.unsplash.com/photo-1514996937319-344454492b37?auto=format&fit=crop&w=1400&q=80",
+    },
+  ]}
+/>
 
             <p className="text-[#648770] text-sm font-medium mt-3 px-2">
-              Scroll horizontally to explore all categories →
+              Click arrows to explore all categories →
             </p>
           </div>
         </section>
@@ -145,7 +158,8 @@ export default function Home() {
             <div
               className="absolute top-0 right-0 w-1/3 h-full opacity-10 pointer-events-none"
               style={{
-                backgroundImage: "radial-gradient(circle, #C8A951 1px, transparent 1px)",
+                backgroundImage:
+                  "radial-gradient(circle, #C8A951 1px, transparent 1px)",
                 backgroundSize: "24px 24px",
               }}
             />

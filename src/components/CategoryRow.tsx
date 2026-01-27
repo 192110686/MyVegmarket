@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import React, { useRef } from "react";
+import React, { useEffect, useRef, useState } from "react";
 
 type Item = {
   key: string;
@@ -9,95 +9,100 @@ type Item = {
   subtitle?: string;
   href: string;
   img: string;
+   fallbackImg?: string;
 };
 
 export default function CategoryRow({ items }: { items: Item[] }) {
   const scrollerRef = useRef<HTMLDivElement | null>(null);
+  const [canLeft, setCanLeft] = useState(false);
+  const [canRight, setCanRight] = useState(true);
 
-  const isDown = useRef(false);
-  const startX = useRef(0);
-  const startScrollLeft = useRef(0);
-  const dragged = useRef(false);
-
-  // ✅ Detect real drag using scroll movement (most reliable)
-  const SCROLL_DRAG_THRESHOLD = 8; // px of actual scroll change
-
-  const onPointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
+  const updateArrows = () => {
     const el = scrollerRef.current;
     if (!el) return;
 
-    // Only mouse/pen; touch uses native swipe
-    if (e.pointerType === "touch") return;
+    const max = el.scrollWidth - el.clientWidth;
+    const left = el.scrollLeft;
 
-    // Only left click
-    if (e.button !== 0) return;
-
-    isDown.current = true;
-    dragged.current = false;
-
-    startX.current = e.clientX;
-    startScrollLeft.current = el.scrollLeft;
+    setCanLeft(left > 2);
+    setCanRight(left < max - 2);
   };
 
-  const onPointerMove = (e: React.PointerEvent<HTMLDivElement>) => {
-    const el = scrollerRef.current;
-    if (!el || !isDown.current) return;
-
-    const dx = e.clientX - startX.current;
-    el.scrollLeft = startScrollLeft.current - dx;
-
-    // ✅ mark as dragged ONLY if scroll actually changed enough
-    const moved = Math.abs(el.scrollLeft - startScrollLeft.current);
-    if (moved > SCROLL_DRAG_THRESHOLD) dragged.current = true;
-  };
-
-  const endPointer = () => {
-    isDown.current = false;
-
-    // ✅ reset AFTER click event finishes
-    setTimeout(() => {
-      dragged.current = false;
-    }, 0);
-  };
-
-  const onWheel = (e: React.WheelEvent<HTMLDivElement>) => {
+  useEffect(() => {
+    updateArrows();
     const el = scrollerRef.current;
     if (!el) return;
 
-    if (Math.abs(e.deltaY) > Math.abs(e.deltaX)) {
-      el.scrollLeft += e.deltaY;
-    } else {
-      el.scrollLeft += e.deltaX;
-    }
+    const onScroll = () => updateArrows();
+    el.addEventListener("scroll", onScroll, { passive: true });
+
+    // update on resize too
+    const onResize = () => updateArrows();
+    window.addEventListener("resize", onResize);
+
+    return () => {
+      el.removeEventListener("scroll", onScroll);
+      window.removeEventListener("resize", onResize);
+    };
+  }, []);
+
+  const scrollByCard = (dir: "left" | "right") => {
+    const el = scrollerRef.current;
+    if (!el) return;
+
+    // scroll roughly one card width (card ~ 320-340 + gap 32)
+    const amount = Math.min(420, el.clientWidth * 0.8);
+    el.scrollBy({ left: dir === "left" ? -amount : amount, behavior: "smooth" });
   };
 
   return (
-    <>
+    <div className="relative">
+      {/* Left arrow */}
+      <button
+        type="button"
+        onClick={() => scrollByCard("left")}
+        disabled={!canLeft}
+        aria-label="Scroll left"
+        className={`absolute -left-3 top-1/2 -translate-y-1/2 z-20 h-11 w-11 rounded-full border shadow-sm grid place-items-center transition
+          ${
+            canLeft
+              ? "bg-white border-[#e0e8e3] hover:bg-[#f6f8f7]"
+              : "bg-white/60 border-[#e0e8e3] opacity-40 cursor-not-allowed"
+          }`}
+      >
+        <span className="material-symbols-outlined text-[22px] text-[#111713]">
+          chevron_left
+        </span>
+      </button>
+
+      {/* Right arrow */}
+      <button
+        type="button"
+        onClick={() => scrollByCard("right")}
+        disabled={!canRight}
+        aria-label="Scroll right"
+        className={`absolute -right-3 top-1/2 -translate-y-1/2 z-20 h-11 w-11 rounded-full border shadow-sm grid place-items-center transition
+          ${
+            canRight
+              ? "bg-white border-[#e0e8e3] hover:bg-[#f6f8f7]"
+              : "bg-white/60 border-[#e0e8e3] opacity-40 cursor-not-allowed"
+          }`}
+      >
+        <span className="material-symbols-outlined text-[22px] text-[#111713]">
+          chevron_right
+        </span>
+      </button>
+
+      {/* Scroller */}
       <div
         ref={scrollerRef}
-        onPointerDown={onPointerDown}
-        onPointerMove={onPointerMove}
-        onPointerUp={endPointer}
-        onPointerCancel={endPointer}
-        onPointerLeave={endPointer}
-        onWheel={onWheel}
-        className="categories-scroll flex gap-8 overflow-x-auto pb-4 px-2 scroll-smooth snap-x snap-mandatory cursor-grab active:cursor-grabbing select-none"
-        style={{
-          WebkitOverflowScrolling: "touch",
-          touchAction: "pan-x",
-        }}
+        className="categories-scroll flex gap-8 overflow-x-auto pb-4 px-2 scroll-smooth snap-x snap-mandatory"
+        style={{ WebkitOverflowScrolling: "touch" }}
       >
         {items.map((c) => (
           <Link
             key={c.key}
             href={c.href}
-            // ✅ block ONLY if a real scroll happened
-            onClick={(ev) => {
-              if (dragged.current) {
-                ev.preventDefault();
-                ev.stopPropagation();
-              }
-            }}
             className="group relative overflow-hidden rounded-[2.5rem] cursor-pointer snap-start shrink-0 w-[280px] sm:w-[320px] md:w-[340px] aspect-[4/5]"
             draggable={false}
           >
@@ -108,9 +113,15 @@ export default function CategoryRow({ items }: { items: Item[] }) {
               loading="lazy"
               draggable={false}
               onError={(e) => {
-                (e.currentTarget as HTMLImageElement).src =
-                  "https://images.unsplash.com/photo-1542838132-92c53300491e?auto=format&fit=crop&w=1600&q=80";
-              }}
+  const imgEl = e.currentTarget as HTMLImageElement;
+  if (c.fallbackImg && imgEl.src !== c.fallbackImg) {
+    imgEl.src = c.fallbackImg; // ✅ per category fallback
+  } else {
+    imgEl.src =
+      "https://images.unsplash.com/photo-1542838132-92c53300491e?auto=format&fit=crop&w=1600&q=80";
+  }
+}}
+
             />
 
             <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/90 via-black/35 to-transparent" />
@@ -126,6 +137,7 @@ export default function CategoryRow({ items }: { items: Item[] }) {
         ))}
       </div>
 
+      {/* Hide scrollbar */}
       <style jsx>{`
         .categories-scroll {
           scrollbar-width: none;
@@ -135,6 +147,6 @@ export default function CategoryRow({ items }: { items: Item[] }) {
           display: none;
         }
       `}</style>
-    </>
+    </div>
   );
 }
