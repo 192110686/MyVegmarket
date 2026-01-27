@@ -3,14 +3,20 @@
 import Link from "next/link";
 import { PRODUCTS } from "@/lib/products";
 import { useMemo, useState } from "react";
+import PriceTrendModal from "@/components/PriceTrendModal";
 
 function safeImg(url: string) {
-  return url || "https://images.unsplash.com/photo-1542838132-92c53300491e?auto=format&fit=crop&w=1600&q=80";
+  return (
+    url ||
+    "https://images.unsplash.com/photo-1542838132-92c53300491e?auto=format&fit=crop&w=1600&q=80"
+  );
 }
 
 export default function ProductDetailClient({ id }: { id: string }) {
   const product = useMemo(() => PRODUCTS.find((p) => p.id === id), [id]);
+
   const [range, setRange] = useState<"7D" | "30D" | "90D">("7D");
+  const [openTrend, setOpenTrend] = useState(false);
 
   const title = product?.name ?? id;
   const origin = product?.origin ?? "UAE";
@@ -34,11 +40,15 @@ export default function ProductDetailClient({ id }: { id: string }) {
           <Link className="hover:text-[#1db954]" href="/">
             Home
           </Link>
-          <span className="material-symbols-outlined text-base">chevron_right</span>
+          <span className="material-symbols-outlined text-base">
+            chevron_right
+          </span>
           <Link className="hover:text-[#1db954]" href="/products/vegetables">
             Products
           </Link>
-          <span className="material-symbols-outlined text-base">chevron_right</span>
+          <span className="material-symbols-outlined text-base">
+            chevron_right
+          </span>
           <span className="text-[#111713] font-bold">{title}</span>
         </div>
 
@@ -69,7 +79,9 @@ export default function ProductDetailClient({ id }: { id: string }) {
                 <button
                   key={idx}
                   className={`w-[76px] h-[76px] rounded-2xl overflow-hidden border bg-white shadow-sm ${
-                    idx === 0 ? "border-[#1db954] ring-2 ring-[#1db954]/15" : "border-[#e0e8e3]"
+                    idx === 0
+                      ? "border-[#1db954] ring-2 ring-[#1db954]/15"
+                      : "border-[#e0e8e3]"
                   }`}
                 >
                   <img
@@ -102,7 +114,9 @@ export default function ProductDetailClient({ id }: { id: string }) {
             </h1>
 
             <p className="text-[#648770] mt-3 flex items-center gap-2 font-medium">
-              <span className="material-symbols-outlined text-base">location_on</span>
+              <span className="material-symbols-outlined text-base">
+                location_on
+              </span>
               Origin: {origin} • {type} • {unit}
             </p>
 
@@ -122,7 +136,9 @@ export default function ProductDetailClient({ id }: { id: string }) {
                       key={r}
                       onClick={() => setRange(r)}
                       className={`px-4 py-1.5 text-xs font-black rounded-full transition-all ${
-                        range === r ? "bg-white shadow-sm text-[#111713]" : "text-[#648770]"
+                        range === r
+                          ? "bg-white shadow-sm text-[#111713]"
+                          : "text-[#648770]"
                       }`}
                     >
                       {r}
@@ -135,7 +151,9 @@ export default function ProductDetailClient({ id }: { id: string }) {
                 <div className="space-y-4">
                   <div className="flex justify-between items-center text-sm">
                     <span className="text-[#648770]">Market Average</span>
-                    <span className="line-through font-medium">AED {marketAvg.toFixed(2)}</span>
+                    <span className="line-through font-medium">
+                      AED {marketAvg.toFixed(2)}
+                    </span>
                   </div>
 
                   <div className="flex justify-between items-end">
@@ -154,10 +172,17 @@ export default function ProductDetailClient({ id }: { id: string }) {
                   </div>
                 </div>
 
-                <div className="h-[120px] rounded-2xl bg-[#1db954]/6 border border-[#1db954]/15 flex items-center justify-center relative overflow-hidden">
+                {/* ✅ Clickable mini chart preview (opens modal) */}
+                <button
+                  type="button"
+                  onClick={() => setOpenTrend(true)}
+                  className="h-[120px] w-full rounded-2xl bg-[#1db954]/6 border border-[#1db954]/15 flex items-center justify-center relative overflow-hidden text-left hover:shadow-md hover:shadow-[#1db954]/10 transition"
+                  title="Click to view full trend"
+                >
                   <span className="text-[11px] uppercase tracking-widest font-black text-[#111713]/40">
-                    PRICE TREND LINE
+                    PRICE TREND
                   </span>
+
                   <div className="absolute right-0 top-0 bottom-0 w-1/2 opacity-70">
                     <svg viewBox="0 0 200 100" className="w-full h-full">
                       <path
@@ -168,7 +193,11 @@ export default function ProductDetailClient({ id }: { id: string }) {
                       />
                     </svg>
                   </div>
-                </div>
+
+                  <span className="absolute bottom-2 right-3 text-[10px] font-black text-[#1db954] bg-white/70 px-2 py-1 rounded-full">
+                    VIEW
+                  </span>
+                </button>
               </div>
             </div>
 
@@ -234,7 +263,8 @@ export default function ProductDetailClient({ id }: { id: string }) {
                 Bulk Purchase Options
               </h2>
               <p className="text-[#648770] font-medium">
-                Are you a restaurant or hotel? Get tiered pricing for orders above 50kg.
+                Are you a restaurant or hotel? Get tiered pricing for orders
+                above 50kg.
               </p>
             </div>
 
@@ -275,6 +305,14 @@ export default function ProductDetailClient({ id }: { id: string }) {
           </div>
         </section>
       </div>
+
+      {/* ✅ Full chart modal */}
+      <PriceTrendModal
+        open={openTrend}
+        onClose={() => setOpenTrend(false)}
+        productId={id}
+        productName={title}
+      />
     </main>
   );
 }
