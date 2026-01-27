@@ -1,6 +1,6 @@
 "use client";
-//import CategoryRow from "@/components/CategoryRow";
-import React from "react";
+
+import CategoryRow from "@/components/CategoryRow";
 import Link from "next/link";
 
 export default function Home() {
@@ -175,109 +175,5 @@ export default function Home() {
         </section>
       </main>
     </div>
-  );
-}
-
-/** ✅ Single row. 3 visible on desktop. Drag + wheel + touchpad + mobile swipe */
-function CategoryRow({
-  items,
-}: {
-  items: { key: string; title: string; subtitle: string; href: string; img: string }[];
-}) {
-  const ref = React.useRef<HTMLDivElement | null>(null);
-  const isDown = React.useRef(false);
-  const startX = React.useRef(0);
-  const startScroll = React.useRef(0);
-
-  const onPointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
-    const el = ref.current;
-    if (!el) return;
-    isDown.current = true;
-    el.setPointerCapture(e.pointerId);
-    startX.current = e.clientX;
-    startScroll.current = el.scrollLeft;
-  };
-
-  const onPointerMove = (e: React.PointerEvent<HTMLDivElement>) => {
-    const el = ref.current;
-    if (!el || !isDown.current) return;
-    const dx = e.clientX - startX.current;
-    el.scrollLeft = startScroll.current - dx;
-  };
-
-  const onPointerUp = () => {
-    isDown.current = false;
-  };
-
-  const onWheel = (e: React.WheelEvent<HTMLDivElement>) => {
-    const el = ref.current;
-    if (!el) return;
-
-    // Convert vertical wheel to horizontal scroll (trackpad/mouse wheel)
-    if (Math.abs(e.deltaY) > Math.abs(e.deltaX)) {
-      e.preventDefault();
-      el.scrollLeft += e.deltaY;
-    }
-  };
-
-  return (
-    <>
-      <div
-        ref={ref}
-        onPointerDown={onPointerDown}
-        onPointerMove={onPointerMove}
-        onPointerUp={onPointerUp}
-        onPointerCancel={onPointerUp}
-        onWheel={onWheel}
-        className="categories-scroll flex gap-8 overflow-x-auto pb-4 px-2 snap-x snap-mandatory scroll-smooth select-none cursor-grab active:cursor-grabbing"
-        style={{ WebkitOverflowScrolling: "touch", touchAction: "pan-x" }}
-      >
-        {items.map((c) => (
-          <Link
-            key={c.key}
-            href={c.href}
-            className="
-              group relative overflow-hidden rounded-[2.2rem] bg-black snap-start shrink-0
-              w-[78%] sm:w-[46%] lg:w-[calc((100%-4rem)/3)]
-              aspect-[4/5]
-            "
-            draggable={false}
-          >
-            <img
-              src={c.img}
-              alt={c.title}
-              draggable={false}
-              className="absolute inset-0 w-full h-full object-cover scale-[1.02] group-hover:scale-[1.08] transition-transform duration-700"
-              loading="lazy"
-              onError={(e) => {
-                (e.currentTarget as HTMLImageElement).src =
-                  "https://images.unsplash.com/photo-1542838132-92c53300491e?auto=format&fit=crop&w=1600&q=80";
-              }}
-            />
-            <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/35 to-transparent" />
-            <div className="absolute inset-0 rounded-[2.2rem] ring-2 ring-transparent group-hover:ring-[#C8A951]/80 transition-all duration-500" />
-
-            <div className="absolute bottom-8 left-8 right-8">
-              <h3 className="text-white text-2xl font-extrabold leading-tight">
-                {c.title}
-              </h3>
-              <p className="text-white/75 text-sm font-medium mt-2">
-                {c.subtitle}
-              </p>
-            </div>
-          </Link>
-        ))}
-      </div>
-
-      <style jsx>{`
-        .categories-scroll {
-          scrollbar-width: none;
-          -ms-overflow-style: none;
-        }
-        .categories-scroll::-webkit-scrollbar {
-          display: none;
-        }
-      `}</style>
-    </>
   );
 }
