@@ -53,11 +53,11 @@ export default function Home() {
           <div className="max-w-[1440px] mx-auto">
             <div className="flex justify-between items-end mb-12 px-2">
               <div>
-                <p className="text-[#C8A951] font-bold text-xs uppercase tracking-[0.2em] mb-3">
+                {/* <p className="text-[#C8A951] font-bold text-xs uppercase tracking-[0.2em] mb-3">
                   The Selection
-                </p>
+                </p> */}
                 <h2 className="text-4xl md:text-5xl font-extrabold text-[#0B5D1E]">
-                  Premium Categories
+                  Categories
                 </h2>
               </div>
 
@@ -78,17 +78,14 @@ export default function Home() {
                 <img
                   src="https://lh3.googleusercontent.com/aida-public/AB6AXuBB_OfbvfFp9pAdXaCsJa_HSgdfwv6Yk2_QgXz2HQsZP-yFKZoZsUiiaYA4SfbUDT4O9ShNaogMesM6OpFINJEPeTHIjoBM7QQg8Lgjd8XxTNvf1-FDnnnzWQ0Mc7kB8LdT7K4_hmh3U9UK9Zvfy8DE8o1rKcMVTeeclS2Zo_SziycVUYUkdG3L5FYhrnL8vPY3MrY17ITkQBPKTqVlAUiKkVwEbwJy7ACVppzH59PyIUzv-sJkQzLZvYnb7xIDfMNBs72YwkHV5zQ"
                   className="absolute inset-0 w-full h-full object-cover"
-                  alt="Exotic Vegetables"
+                  alt="Fresh Vegetables"
                 />
                 <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/30 to-transparent" />
                 <div className="absolute inset-0 border-4 border-transparent group-hover:border-[#C8A951] transition-all duration-500 rounded-[2.5rem]" />
                 <div className="absolute bottom-10 left-10 right-10">
                   <h3 className="text-white text-2xl font-bold mb-2">
-                    Exotic Vegetables
+                    Fresh Vegetables
                   </h3>
-                  <p className="text-white/75 text-sm font-medium">
-                    Directly from alpine farms & local hydroponics
-                  </p>
                 </div>
               </Link>
 
@@ -105,11 +102,8 @@ export default function Home() {
                 <div className="absolute inset-0 border-4 border-transparent group-hover:border-[#C8A951] transition-all duration-500 rounded-[2.5rem]" />
                 <div className="absolute bottom-10 left-10 right-10">
                   <h3 className="text-white text-2xl font-bold mb-2">
-                    Seasonal Fruits
+                    Fresh Fruits
                   </h3>
-                  <p className="text-white/70 text-sm font-medium">
-                    Global imports of premium varieties
-                  </p>
                 </div>
               </Link>
 
@@ -126,11 +120,8 @@ export default function Home() {
                 <div className="absolute inset-0 border-4 border-transparent group-hover:border-[#C8A951] transition-all duration-500 rounded-[2.5rem]" />
                 <div className="absolute bottom-10 left-10 right-10">
                   <h3 className="text-white text-2xl font-bold mb-2">
-                    Farm Fresh Eggs
+                    Fresh Eggs
                   </h3>
-                  <p className="text-white/70 text-sm font-medium">
-                    Organic, free-range local harvests
-                  </p>
                 </div>
               </Link>
             </div>

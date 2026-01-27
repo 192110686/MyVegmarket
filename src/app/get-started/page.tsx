@@ -54,7 +54,7 @@ export default function GetStartedPage() {
               {[
                 { icon: "schedule", title: "Fast Response", desc: "Quote shared within 30–60 mins." },
                 { icon: "verified", title: "Verified Suppliers", desc: "Only trusted wholesale vendors." },
-                { icon: "local_shipping", title: "UAE Delivery", desc: "Reliable cold chain logistics." },
+                { icon: "local_shipping", title: "UAE Delivery", desc: "Reliable supply chain logistics." },
               ].map((i) => (
                 <div
                   key={i.title}

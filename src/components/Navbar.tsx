@@ -136,10 +136,10 @@ export default function Navbar() {
         {/* Links */}
         <nav className="hidden lg:flex items-center gap-10 font-semibold text-[#111713]">
           <Link href="/products/vegetables" className="hover:text-[#1db954]">
-            Market Prices
+            AL Aweer Prices
           </Link>
           <Link href="/bulk-supply" className="hover:text-[#1db954]">
-            Bulk Supply
+            Get Started
           </Link>
           <Link href="/services" className="hover:text-[#1db954]">
             Services
@@ -152,7 +152,7 @@ export default function Navbar() {
             href="/get-started"
             className="h-11 px-6 rounded-full bg-[#1db954] text-white font-bold flex items-center justify-center hover:opacity-90"
           >
-            Get Started
+            Containers Listing
           </Link>
 
           <Link
