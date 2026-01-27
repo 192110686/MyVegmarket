@@ -18,21 +18,22 @@ const CATEGORY_META: Record<ProductCategory, { title: string; desc: string }> = 
   },
   spices: {
     title: "Spices",
-    desc: "High quality whole spices for restaurants, retailers, and exporters.",
+    desc: "Whole and ground spices for restaurants, caterers and bulk kitchens.",
   },
   nuts: {
     title: "Nuts & Dry Fruits",
-    desc: "Premium nuts and dry fruits with consistent supply options.",
+    desc: "Premium nuts and dry fruits for retail, horeca and catering supply.",
   },
   eggs: {
     title: "Eggs",
-    desc: "Daily egg supply with stable pricing and quick delivery.",
+    desc: "Fresh egg sourcing with daily supply for UAE businesses.",
   },
   oils: {
-    title: "Cooking Oil",
-    desc: "Cooking oils for bulk kitchens and retail supply across UAE.",
+    title: "Cooking Oils",
+    desc: "Reliable cooking oils for bulk usage—restaurants, hotels and catering.",
   },
 };
+
 
 function safeImg(url: string) {
   return (
