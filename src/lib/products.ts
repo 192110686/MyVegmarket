@@ -1,4 +1,11 @@
-export type ProductCategory = "vegetables" | "fruits" | "eggs";
+export type ProductCategory =
+  | "vegetables"
+  | "fruits"
+  | "spices"
+  | "nuts"
+  | "eggs"
+  | "oils";
+
 
 export type Product = {
   id: string;
@@ -290,4 +297,322 @@ export const PRODUCTS: Product[] = [
     about:
       "Popular for gourmet plating and premium catering. Clean packed and delivered in chilled conditions.",
   },
+    // ----------------------------
+  // SPICES
+  // ----------------------------
+  {
+    id: "cardamom",
+    name: "Cardamom (Green)",
+    subtitle: "Aromatic Pods • 1kg Pack",
+    category: "spices",
+    origin: "India",
+    type: "Regular",
+    unit: "KG",
+    marketAvg: 0,
+    myPrice: 0,
+    image:
+      "https://images.unsplash.com/photo-1625944525092-11b5cc7f7b5b?auto=format&fit=crop&w=1600&q=80",
+    badgeColor: "bg-emerald-700",
+    packaging: "1kg Pack",
+    freshness: "Sealed Pack",
+    about:
+      "Premium green cardamom with strong aroma—ideal for tea, desserts, and biryani masala.",
+  },
+  {
+    id: "black-pepper",
+    name: "Black Pepper",
+    subtitle: "Bold Flavor • 1kg Pack",
+    category: "spices",
+    origin: "Vietnam",
+    type: "Regular",
+    unit: "KG",
+    marketAvg: 0,
+    myPrice: 0,
+    image:
+      "https://images.unsplash.com/photo-1615486363973-672b5f9f1c8b?auto=format&fit=crop&w=1600&q=80",
+    badgeColor: "bg-neutral-800",
+    packaging: "1kg Pack",
+    freshness: "Sealed Pack",
+    about:
+      "Whole peppercorns for restaurants and commercial kitchens—fresh, pungent and consistent quality.",
+  },
+  {
+    id: "turmeric",
+    name: "Turmeric Powder",
+    subtitle: "Fine Ground • 1kg Pack",
+    category: "spices",
+    origin: "India",
+    type: "Regular",
+    unit: "KG",
+    marketAvg: 0,
+    myPrice: 0,
+    image:
+      "https://images.unsplash.com/photo-1615485925600-9724cc7a7b2b?auto=format&fit=crop&w=1600&q=80",
+    badgeColor: "bg-yellow-600",
+    packaging: "1kg Pack",
+    freshness: "Sealed Pack",
+    about:
+      "Bright color and rich aroma—perfect for curries, marinades and daily bulk cooking.",
+  },
+  {
+    id: "clove",
+    name: "Clove",
+    subtitle: "Whole Buds • 1kg Pack",
+    category: "spices",
+    origin: "Indonesia",
+    type: "Regular",
+    unit: "KG",
+    marketAvg: 0,
+    myPrice: 0,
+    image:
+      "https://images.unsplash.com/photo-1604335399105-b0c3c2f2c8f2?auto=format&fit=crop&w=1600&q=80",
+    badgeColor: "bg-amber-700",
+    packaging: "1kg Pack",
+    freshness: "Sealed Pack",
+    about:
+      "Whole clove buds—great for biryani, tea, spice blends and premium catering use.",
+  },
+  {
+    id: "cinnamon",
+    name: "Cinnamon Sticks",
+    subtitle: "Whole Sticks • 1kg Pack",
+    category: "spices",
+    origin: "Sri Lanka",
+    type: "Regular",
+    unit: "KG",
+    marketAvg: 0,
+    myPrice: 0,
+    image:
+      "https://images.unsplash.com/photo-1600459429297-68df86b1a7e2?auto=format&fit=crop&w=1600&q=80",
+    badgeColor: "bg-orange-700",
+    packaging: "1kg Pack",
+    freshness: "Sealed Pack",
+    about:
+      "Premium cinnamon sticks—perfect for desserts, beverages and aromatic spice mixes.",
+  },
+  {
+    id: "bay-leaf",
+    name: "Bay Leaf",
+    subtitle: "Whole Leaves • 500g Pack",
+    category: "spices",
+    origin: "Turkey",
+    type: "Regular",
+    unit: "Pack",
+    marketAvg: 0,
+    myPrice: 0,
+    image:
+      "https://images.unsplash.com/photo-1604908812571-2f7cfbbf89c6?auto=format&fit=crop&w=1600&q=80",
+    badgeColor: "bg-green-700",
+    packaging: "500g Pack",
+    freshness: "Sealed Pack",
+    about:
+      "Aromatic bay leaves for soups, curries and rice dishes—clean and packed for bulk kitchens.",
+  },
+  {
+    id: "star-anise",
+    name: "Star Anise",
+    subtitle: "Whole Flower • 1kg Pack",
+    category: "spices",
+    origin: "China",
+    type: "Regular",
+    unit: "KG",
+    marketAvg: 0,
+    myPrice: 0,
+    image:
+      "https://images.unsplash.com/photo-1615485925644-25e72f8e7c44?auto=format&fit=crop&w=1600&q=80",
+    badgeColor: "bg-yellow-900",
+    packaging: "1kg Pack",
+    freshness: "Sealed Pack",
+    about:
+      "Strong aroma and premium look—ideal for biryani masala and spice blends.",
+  },
+
+  // ----------------------------
+  // NUTS & DRY FRUITS
+  // ----------------------------
+  {
+    id: "cashew",
+    name: "Cashew Nuts",
+    subtitle: "Premium Whole • 10kg Carton",
+    category: "nuts",
+    origin: "Vietnam",
+    type: "Regular",
+    unit: "Carton",
+    marketAvg: 0,
+    myPrice: 0,
+    image:
+      "https://images.unsplash.com/photo-1599599810694-bb3a3b1d4b6b?auto=format&fit=crop&w=1600&q=80",
+    badgeColor: "bg-amber-600",
+    packaging: "10kg Carton",
+    freshness: "Sealed Carton",
+    about:
+      "Premium whole cashews for sweets, snacks, and bulk kitchen usage.",
+  },
+  {
+    id: "almond",
+    name: "Almond",
+    subtitle: "California Grade • 10kg Carton",
+    category: "nuts",
+    origin: "USA",
+    type: "Regular",
+    unit: "Carton",
+    marketAvg: 0,
+    myPrice: 0,
+    image:
+      "https://images.unsplash.com/photo-1615485925878-c8d7a3a3f2bd?auto=format&fit=crop&w=1600&q=80",
+    badgeColor: "bg-rose-700",
+    packaging: "10kg Carton",
+    freshness: "Sealed Carton",
+    about:
+      "Crunchy premium almonds for bakeries, cafes and retail packs.",
+  },
+  {
+    id: "walnut",
+    name: "Walnut",
+    subtitle: "Shelled • 10kg Carton",
+    category: "nuts",
+    origin: "Chile",
+    type: "Regular",
+    unit: "Carton",
+    marketAvg: 0,
+    myPrice: 0,
+    image:
+      "https://images.unsplash.com/photo-1599599810720-2f2b6d3d6e7a?auto=format&fit=crop&w=1600&q=80",
+    badgeColor: "bg-stone-700",
+    packaging: "10kg Carton",
+    freshness: "Sealed Carton",
+    about:
+      "Premium shelled walnuts—perfect for desserts, salads and healthy mixes.",
+  },
+  {
+    id: "dates",
+    name: "Dates",
+    subtitle: "Premium Grade • 5kg Box",
+    category: "nuts",
+    origin: "UAE",
+    type: "Regular",
+    unit: "Box",
+    marketAvg: 0,
+    myPrice: 0,
+    image:
+      "https://images.unsplash.com/photo-1604908554131-2c8d12c8e9f6?auto=format&fit=crop&w=1600&q=80",
+    badgeColor: "bg-amber-800",
+    packaging: "5kg Box",
+    freshness: "Packed Fresh",
+    about:
+      "Soft premium dates for gifting, retail, and hotel breakfast service.",
+  },
+  {
+    id: "raisins",
+    name: "Dry Grapes (Raisins)",
+    subtitle: "Golden Raisins • 5kg Pack",
+    category: "nuts",
+    origin: "Turkey",
+    type: "Regular",
+    unit: "Pack",
+    marketAvg: 0,
+    myPrice: 0,
+    image:
+      "https://images.unsplash.com/photo-1604908553783-9b5c16d2a2fd?auto=format&fit=crop&w=1600&q=80",
+    badgeColor: "bg-yellow-700",
+    packaging: "5kg Pack",
+    freshness: "Sealed Pack",
+    about:
+      "Sweet golden raisins for bakeries, desserts and bulk mixes.",
+  },
+  {
+    id: "pista",
+    name: "Pistachio",
+    subtitle: "Roasted • 10kg Carton",
+    category: "nuts",
+    origin: "Iran",
+    type: "Regular",
+    unit: "Carton",
+    marketAvg: 0,
+    myPrice: 0,
+    image:
+      "https://images.unsplash.com/photo-1599599810833-7f447ddb5f9b?auto=format&fit=crop&w=1600&q=80",
+    badgeColor: "bg-lime-700",
+    packaging: "10kg Carton",
+    freshness: "Sealed Carton",
+    about:
+      "Premium pistachios for sweets, ice cream and retail packs.",
+  },
+
+  // ----------------------------
+  // COOKING OILS
+  // ----------------------------
+  {
+    id: "olive-oil",
+    name: "Olive Oil",
+    subtitle: "Extra Virgin • 5L Tin",
+    category: "oils",
+    origin: "Spain",
+    type: "Regular",
+    unit: "Tin",
+    marketAvg: 0,
+    myPrice: 0,
+    image:
+      "https://images.unsplash.com/photo-1615485925712-2cbe4c1f0a2c?auto=format&fit=crop&w=1600&q=80",
+    badgeColor: "bg-green-700",
+    packaging: "5L Tin",
+    freshness: "Sealed Pack",
+    about:
+      "Premium olive oil for salads, kitchens and horeca supply.",
+  },
+  {
+    id: "sunflower-oil",
+    name: "Sunflower Oil",
+    subtitle: "Cooking Oil • 5L Bottle",
+    category: "oils",
+    origin: "Ukraine",
+    type: "Regular",
+    unit: "Bottle",
+    marketAvg: 0,
+    myPrice: 0,
+    image:
+      "https://images.unsplash.com/photo-1625944525117-8c5a2dbf7b52?auto=format&fit=crop&w=1600&q=80",
+    badgeColor: "bg-yellow-600",
+    packaging: "5L Bottle",
+    freshness: "Sealed Pack",
+    about:
+      "Everyday cooking oil for restaurants and bulk kitchens.",
+  },
+  {
+    id: "groundnut-oil",
+    name: "Groundnut Oil",
+    subtitle: "High Heat Cooking • 5L Bottle",
+    category: "oils",
+    origin: "India",
+    type: "Regular",
+    unit: "Bottle",
+    marketAvg: 0,
+    myPrice: 0,
+    image:
+      "https://images.unsplash.com/photo-1604908553697-61a2a6d52c42?auto=format&fit=crop&w=1600&q=80",
+    badgeColor: "bg-orange-700",
+    packaging: "5L Bottle",
+    freshness: "Sealed Pack",
+    about:
+      "Great for frying and high-heat cooking with clean taste.",
+  },
+  {
+    id: "sesame-oil",
+    name: "Sesame Oil",
+    subtitle: "Aromatic • 1L Bottle",
+    category: "oils",
+    origin: "India",
+    type: "Regular",
+    unit: "Bottle",
+    marketAvg: 0,
+    myPrice: 0,
+    image:
+      "https://images.unsplash.com/photo-1604908553628-0e8c6f0c54fd?auto=format&fit=crop&w=1600&q=80",
+    badgeColor: "bg-amber-700",
+    packaging: "1L Bottle",
+    freshness: "Sealed Pack",
+    about:
+      "Aromatic sesame oil for flavor-rich cooking and marinades.",
+  },
+
 ];

@@ -49,84 +49,107 @@ export default function Home() {
         </section>
 
         {/* CATEGORIES */}
-        <section className="px-6 lg:px-20 py-24">
-          <div className="max-w-[1440px] mx-auto">
-            <div className="flex justify-between items-end mb-12 px-2">
-              <div>
-                {/* <p className="text-[#C8A951] font-bold text-xs uppercase tracking-[0.2em] mb-3">
-                  The Selection
-                </p> */}
-                <h2 className="text-4xl md:text-5xl font-extrabold text-[#0B5D1E]">
-                  Categories
-                </h2>
-              </div>
+        {/* CATEGORIES */}
+<section className="px-6 lg:px-20 py-24">
+  <div className="max-w-[1440px] mx-auto">
+    <div className="flex justify-between items-end mb-12 px-2">
+      <div>
+        <h2 className="text-4xl md:text-5xl font-extrabold text-[#0B5D1E]">
+          Categories
+        </h2>
+        <p className="text-[#648770] font-medium mt-2">
+          Browse premium supplies for your business.
+        </p>
+      </div>
 
-              <Link
-                href="/products/vegetables"
-                className="text-[#1db954] text-sm font-bold flex items-center gap-1 hover:underline underline-offset-4"
-              >
-                Browse all →
-              </Link>
+      <Link
+        href="/products/vegetables"
+        className="text-[#1db954] text-sm font-bold flex items-center gap-1 hover:underline underline-offset-4"
+      >
+        Browse all →
+      </Link>
+    </div>
+
+    {/* Horizontal scroll */}
+    <div className="relative">
+      {/* Fade edges for premium look */}
+      <div className="pointer-events-none absolute left-0 top-0 h-full w-10 bg-gradient-to-r from-white to-transparent z-10" />
+      <div className="pointer-events-none absolute right-0 top-0 h-full w-10 bg-gradient-to-l from-white to-transparent z-10" />
+
+      <div className="flex gap-6 overflow-x-auto pb-4 snap-x snap-mandatory scrollbar-hide">
+        {[
+          {
+            href: "/products/vegetables",
+            title: "Fresh Vegetables",
+            image:
+              "https://images.unsplash.com/photo-1540420773420-3366772f4999?auto=format&fit=crop&w=1600&q=80",
+          },
+          {
+            href: "/products/fruits",
+            title: "Fresh Fruits",
+            image:
+              "https://images.unsplash.com/photo-1610832958506-aa56368176cf?auto=format&fit=crop&w=1600&q=80",
+          },
+          {
+            href: "/products/spices",
+            title: "Whole Spices",
+            image:
+              "https://images.unsplash.com/photo-1615485290382-441e4d049cb5?auto=format&fit=crop&w=1600&q=80",
+          },
+          {
+            href: "/products/nuts",
+            title: "Nuts & Dry Fruits",
+            image:
+              "https://images.unsplash.com/photo-1599599810769-bcde5a160d32?auto=format&fit=crop&w=1600&q=80",
+          },
+          {
+            href: "/products/eggs",
+            title: "Fresh Eggs",
+            image:
+              "https://images.unsplash.com/photo-1587486912758-4367d2017d6c?auto=format&fit=crop&w=1600&q=80",
+          },
+          {
+            href: "/products/oil",
+            title: "Cooking Oil",
+            image:
+              "https://images.unsplash.com/photo-1514996937319-344454492b37?auto=format&fit=crop&w=1600&q=80",
+          },
+        ].map((c) => (
+          <Link
+            key={c.href}
+            href={c.href}
+            className="group relative snap-start min-w-[260px] sm:min-w-[300px] md:min-w-[330px] lg:min-w-[360px] aspect-[4/5] overflow-hidden rounded-[2.5rem] cursor-pointer"
+          >
+            <img
+              src={c.image}
+              alt={c.title}
+              className="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-transform duration-700"
+            />
+
+            {/* Gradient overlay */}
+            <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/25 to-transparent" />
+
+            {/* Border hover */}
+            <div className="absolute inset-0 border-4 border-transparent group-hover:border-[#C8A951] transition-all duration-500 rounded-[2.5rem]" />
+
+            {/* Text */}
+            <div className="absolute bottom-10 left-10 right-10">
+              <h3 className="text-white text-2xl font-bold mb-1">{c.title}</h3>
+              <p className="text-white/70 text-sm font-medium">
+                View live rates & supply
+              </p>
             </div>
+          </Link>
+        ))}
+      </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-              {/* Vegetables */}
-              <Link
-                href="/products/vegetables"
-                className="group relative aspect-[4/5] overflow-hidden rounded-[2.5rem] cursor-pointer"
-              >
-                <img
-                  src="https://lh3.googleusercontent.com/aida-public/AB6AXuBB_OfbvfFp9pAdXaCsJa_HSgdfwv6Yk2_QgXz2HQsZP-yFKZoZsUiiaYA4SfbUDT4O9ShNaogMesM6OpFINJEPeTHIjoBM7QQg8Lgjd8XxTNvf1-FDnnnzWQ0Mc7kB8LdT7K4_hmh3U9UK9Zvfy8DE8o1rKcMVTeeclS2Zo_SziycVUYUkdG3L5FYhrnL8vPY3MrY17ITkQBPKTqVlAUiKkVwEbwJy7ACVppzH59PyIUzv-sJkQzLZvYnb7xIDfMNBs72YwkHV5zQ"
-                  className="absolute inset-0 w-full h-full object-cover"
-                  alt="Fresh Vegetables"
-                />
-                <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/30 to-transparent" />
-                <div className="absolute inset-0 border-4 border-transparent group-hover:border-[#C8A951] transition-all duration-500 rounded-[2.5rem]" />
-                <div className="absolute bottom-10 left-10 right-10">
-                  <h3 className="text-white text-2xl font-bold mb-2">
-                    Fresh Vegetables
-                  </h3>
-                </div>
-              </Link>
-
-              {/* Fruits */}
-              <Link
-                href="/products/fruits"
-                className="group relative aspect-[4/5] overflow-hidden rounded-[2.5rem] cursor-pointer bg-[#0B5D1E]"
-                style={{
-                  backgroundImage: `linear-gradient(0deg, rgba(0,0,0,0.85) 0%, rgba(0,0,0,0) 45%), url("https://lh3.googleusercontent.com/aida-public/AB6AXuBPUMFIjtU7fCPlsusZCAIIr_f67ibJUuRHi0QoA1qkbXaBlCNMM6pLFmKvxW9i-tbhocVcOroEMEc6r1nZoofA6t5H4SVitr44zG3EX-9bC1xRi9xPhqmUmlk-ngSgRBCeFvW9CQJnlOa34ea5meDqVu6wQHdKg9X2T6yw8BJTmTUu4TtX4ML487rZGN-HP0690G-GpNdk8_6B_IIue0o5NZu7XfuKV6gieZfk6Agkqg-GWJXrv7AbRdQZf1TyU2tFGQANvRIiFDo")`,
-                  backgroundSize: "cover",
-                  backgroundPosition: "center",
-                }}
-              >
-                <div className="absolute inset-0 border-4 border-transparent group-hover:border-[#C8A951] transition-all duration-500 rounded-[2.5rem]" />
-                <div className="absolute bottom-10 left-10 right-10">
-                  <h3 className="text-white text-2xl font-bold mb-2">
-                    Fresh Fruits
-                  </h3>
-                </div>
-              </Link>
-
-              {/* Eggs */}
-              <Link
-                href="/products/eggs"
-                className="group relative aspect-[4/5] overflow-hidden rounded-[2.5rem] cursor-pointer bg-[#0B5D1E]"
-                style={{
-                  backgroundImage: `linear-gradient(0deg, rgba(0,0,0,0.85) 0%, rgba(0,0,0,0) 45%), url("https://lh3.googleusercontent.com/aida-public/AB6AXuByVD4oF7U_G2CG-HodQNx9_fRsLpxd2QbInKsQIKTL1MLcY4NmtXb2ix1_NIVxM_uebS_YKyTV-nMgiWNItMCm1i9uJMWBpkswjIUkiwhyXph8SrF92vuERfZWhmjpRsLX-xXW19r4_WGckkydgnWpQPL2RDFTvAgzgHRue6WKgx5u9-tsDgO8IhECg-ONtLw4KOf_304Dx-_5ZT42jM3Va6DIFh2T16x1DwbkzOHqqbee5TTVEDUIr88VZ0B4a3ywB60V66RE0XY")`,
-                  backgroundSize: "cover",
-                  backgroundPosition: "center",
-                }}
-              >
-                <div className="absolute inset-0 border-4 border-transparent group-hover:border-[#C8A951] transition-all duration-500 rounded-[2.5rem]" />
-                <div className="absolute bottom-10 left-10 right-10">
-                  <h3 className="text-white text-2xl font-bold mb-2">
-                    Fresh Eggs
-                  </h3>
-                </div>
-              </Link>
-            </div>
-          </div>
-        </section>
+      {/* Small helper text */}
+      <p className="text-[#9ab0a1] text-xs font-semibold mt-4 px-2">
+        Tip: Swipe to explore all categories →
+      </p>
+    </div>
+  </div>
+</section>   
 
         {/* SERVICES */}
         <section className="px-6 lg:px-20 py-28 bg-[#f8faf9]">
