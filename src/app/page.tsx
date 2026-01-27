@@ -49,7 +49,7 @@ export default function Home() {
         </section>
 
         {/* CATEGORIES */}
-               {/* CATEGORIES */}
+              {/* CATEGORIES */}
 <section className="px-6 lg:px-20 py-24">
   <div className="max-w-[1440px] mx-auto">
     <div className="flex justify-between items-end mb-12 px-2">
@@ -70,11 +70,6 @@ export default function Home() {
       </Link>
     </div>
 
-    {/* helper to avoid same image caching */}
-    {/*
-      NOTE: Keep this helper inside the component OR move it above return.
-      It prevents “same image for every card” issue.
-    */}
     {(() => {
       const CATS = [
         {
@@ -122,46 +117,68 @@ export default function Home() {
       ];
 
       return (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
-          {CATS.map((c) => (
-            <Link
-              key={c.key}
-              href={c.href}
-              className="group relative overflow-hidden rounded-[2.2rem] aspect-[4/5] bg-black"
-            >
-              <img
-                src={c.img}
-                alt={c.title}
-                className="absolute inset-0 w-full h-full object-cover scale-[1.02] group-hover:scale-[1.08] transition-transform duration-700"
-                loading="lazy"
-                onError={(e) => {
-                  (e.currentTarget as HTMLImageElement).src =
-                    "https://images.unsplash.com/photo-1542838132-92c53300491e?auto=format&fit=crop&w=1600&q=80";
-                }}
-              />
+        <>
+          {/* Horizontal Scroll Row */}
+          <div className="flex gap-8 overflow-x-auto pb-4 px-2 snap-x snap-mandatory scroll-smooth categories-scroll">
+            {CATS.map((c) => (
+              <Link
+                key={c.key}
+                href={c.href}
+                className="group relative overflow-hidden rounded-[2.2rem] bg-black snap-start shrink-0
+                           w-[280px] sm:w-[320px] md:w-[340px] aspect-[4/5]"
+              >
+                <img
+                  src={c.img}
+                  alt={c.title}
+                  className="absolute inset-0 w-full h-full object-cover scale-[1.02] group-hover:scale-[1.08] transition-transform duration-700"
+                  loading="lazy"
+                  onError={(e) => {
+                    (e.currentTarget as HTMLImageElement).src =
+                      "https://images.unsplash.com/photo-1542838132-92c53300491e?auto=format&fit=crop&w=1600&q=80";
+                  }}
+                />
 
-              {/* dark fade like reference */}
-              <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/35 to-transparent" />
+                {/* dark fade like reference */}
+                <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/35 to-transparent" />
 
-              {/* subtle border glow on hover */}
-              <div className="absolute inset-0 rounded-[2.2rem] ring-2 ring-transparent group-hover:ring-[#C8A951]/80 transition-all duration-500" />
+                {/* subtle border glow on hover */}
+                <div className="absolute inset-0 rounded-[2.2rem] ring-2 ring-transparent group-hover:ring-[#C8A951]/80 transition-all duration-500" />
 
-              {/* text bottom-left like reference */}
-              <div className="absolute bottom-8 left-8 right-8">
-                <h3 className="text-white text-2xl font-extrabold leading-tight">
-                  {c.title}
-                </h3>
-                <p className="text-white/75 text-sm font-medium mt-2">
-                  {c.subtitle}
-                </p>
-              </div>
-            </Link>
-          ))}
-        </div>
+                {/* text bottom-left like reference */}
+                <div className="absolute bottom-8 left-8 right-8">
+                  <h3 className="text-white text-2xl font-extrabold leading-tight">
+                    {c.title}
+                  </h3>
+                  <p className="text-white/75 text-sm font-medium mt-2">
+                    {c.subtitle}
+                  </p>
+                </div>
+              </Link>
+            ))}
+          </div>
+
+          {/* Tip text like your screenshot */}
+          <p className="text-[#648770] text-sm font-medium mt-3 px-2">
+            Tip: Scroll horizontally to explore all categories →
+          </p>
+
+          {/* Hide scrollbar nicely */}
+          <style jsx>{`
+            .categories-scroll {
+              scrollbar-width: none;
+              -ms-overflow-style: none;
+            }
+            .categories-scroll::-webkit-scrollbar {
+              display: none;
+            }
+          `}</style>
+        </>
       );
     })()}
   </div>
 </section>
+
+
         {/* SERVICES */}
         <section className="px-6 lg:px-20 py-28 bg-[#f8faf9]">
           <div className="max-w-[1440px] mx-auto text-center mb-20">
