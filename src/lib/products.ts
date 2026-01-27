@@ -6,7 +6,6 @@ export type ProductCategory =
   | "eggs"
   | "oils";
 
-
 export type Product = {
   id: string;
   name: string;
@@ -16,13 +15,15 @@ export type Product = {
   type: "Organic" | "Regular";
   unit: string;
   marketAvg: number; // Al Aweer Rate
-  myPrice: number;   // MyVegMarket Price
+  myPrice: number; // MyVegMarket Price
   image: string;
   badgeColor: string;
   about?: string;
   packaging?: string;
   freshness?: string;
 };
+
+const U = (q: string) => `https://source.unsplash.com/featured/1600x1000?${encodeURIComponent(q)}`;
 
 export const PRODUCTS: Product[] = [
   // ----------------------------
@@ -38,12 +39,12 @@ export const PRODUCTS: Product[] = [
     unit: "KG",
     marketAvg: 9.5,
     myPrice: 6.75,
-    image: "https://commons.wikimedia.org/wiki/Special:FilePath/Tomatoes.jpg",
+    image: U("fresh tomatoes"),
     badgeColor: "bg-red-600",
     packaging: "Per KG",
     freshness: "Arrived This Morning",
     about:
-      "Fresh local tomatoes with consistent sizing and firmness—ideal for restaurants, cafeterias, and daily bulk cooking.",
+      "Fresh local tomatoes with good firmness—ideal for restaurants and daily bulk cooking.",
   },
   {
     id: "cucumber-uae",
@@ -55,12 +56,12 @@ export const PRODUCTS: Product[] = [
     unit: "Carton",
     marketAvg: 22,
     myPrice: 18.5,
-    image: "https://commons.wikimedia.org/wiki/Special:FilePath/Cucumber.jpg",
+    image: U("fresh cucumber"),
     badgeColor: "bg-green-700",
     packaging: "5kg Carton",
     freshness: "Harvested 24h ago",
     about:
-      "Crisp cucumbers suitable for salads, juice bars, and hotel kitchens. Stable supply and clean grading.",
+      "Crisp cucumbers for salads and juice bars. Clean grading and stable supply.",
   },
   {
     id: "bell-pepper-nl",
@@ -72,13 +73,12 @@ export const PRODUCTS: Product[] = [
     unit: "Carton",
     marketAvg: 85,
     myPrice: 72,
-    image:
-      "https://commons.wikimedia.org/wiki/Special:FilePath/Bell_peppers.jpg",
+    image: U("bell peppers red yellow green"),
     badgeColor: "bg-emerald-700",
     packaging: "5kg Carton",
     freshness: "Chilled Import Stock",
     about:
-      "Premium mixed bell peppers—great for premium restaurants, salad bars, and grill menus. Bright color & crunch.",
+      "Premium mixed bell peppers—great for salads, grills, and premium kitchen menus.",
   },
   {
     id: "onion-red-oman",
@@ -90,12 +90,12 @@ export const PRODUCTS: Product[] = [
     unit: "Bag",
     marketAvg: 32,
     myPrice: 26.5,
-    image: "https://commons.wikimedia.org/wiki/Special:FilePath/Onion.jpg",
+    image: U("red onions"),
     badgeColor: "bg-red-800",
     packaging: "10kg Bag",
     freshness: "Daily Supply",
     about:
-      "Stable daily onion supply with consistent sizing, ideal for large kitchens and bulk meal production.",
+      "Stable daily onion supply with consistent sizing—ideal for large kitchens.",
   },
   {
     id: "potato-egypt",
@@ -107,13 +107,12 @@ export const PRODUCTS: Product[] = [
     unit: "Bag",
     marketAvg: 28,
     myPrice: 23,
-    image:
-      "https://commons.wikimedia.org/wiki/Special:FilePath/Potato.jpg",
+    image: U("potatoes"),
     badgeColor: "bg-amber-700",
     packaging: "10kg Bag",
     freshness: "New Batch This Week",
     about:
-      "Clean graded potatoes—perfect for fries, mash, and bulk prep. Reliable quality for hotels and catering.",
+      "Washed and graded potatoes—perfect for fries, mash, and bulk prep.",
   },
   {
     id: "carrot-aus",
@@ -125,16 +124,15 @@ export const PRODUCTS: Product[] = [
     unit: "Bag",
     marketAvg: 38,
     myPrice: 32,
-    image:
-      "https://commons.wikimedia.org/wiki/Special:FilePath/Carrot.jpg",
+    image: U("fresh carrots"),
     badgeColor: "bg-orange-600",
     packaging: "10kg Bag",
     freshness: "Chilled Storage",
     about:
-      "Premium carrots with consistent texture—great for salads, juices, and soup bases in commercial kitchens.",
+      "Premium carrots with consistent crunch—great for salads, juices and soups.",
   },
   {
-    id: "broccoli-china",
+    id: "broccoli-import",
     name: "Broccoli (Import)",
     subtitle: "Fresh Heads • 5kg Carton",
     category: "vegetables",
@@ -143,13 +141,12 @@ export const PRODUCTS: Product[] = [
     unit: "Carton",
     marketAvg: 55,
     myPrice: 49,
-    image:
-      "https://commons.wikimedia.org/wiki/Special:FilePath/Broccoli.jpg",
+    image: U("broccoli"),
     badgeColor: "bg-green-800",
     packaging: "5kg Carton",
     freshness: "Arrived This Week",
     about:
-      "Fresh broccoli heads suitable for steaming, stir fry, and meal-prep menus. Uniform size and stable supply.",
+      "Fresh broccoli heads for steaming and stir-fry. Uniform size and stable supply.",
   },
 
   // ----------------------------
@@ -165,31 +162,30 @@ export const PRODUCTS: Product[] = [
     unit: "Carton",
     marketAvg: 95,
     myPrice: 86,
-    image: "https://commons.wikimedia.org/wiki/Special:FilePath/Apple.jpg",
+    image: U("red apples"),
     badgeColor: "bg-red-600",
     packaging: "18kg Carton",
     freshness: "Import Batch Today",
     about:
-      "Premium apples with strong crunch and long shelf life—ideal for hotels, offices, and retail supply.",
+      "Premium apples with strong crunch and shelf life—ideal for hotels and retail supply.",
   },
- {
-  id: "banana-ecuador",
-  name: "Banana (Ecuador)",
-  subtitle: "Premium Grade • 13kg Carton",
-  category: "fruits",
-  origin: "Ecuador",
-  type: "Regular",
-  unit: "Carton",
-  marketAvg: 62,
-  myPrice: 56,
-  image: "https://commons.wikimedia.org/wiki/Special:FilePath/Banana_and_cross_section.jpg",
-  badgeColor: "bg-yellow-500",
-  packaging: "13kg Carton",
-  freshness: "Ripening Controlled",
-  about:
-    "Consistent size and quality bananas—excellent for breakfast buffets, smoothie bars, and grocery supply.",
-},
-
+  {
+    id: "banana-ecuador",
+    name: "Banana (Ecuador)",
+    subtitle: "Premium Grade • 13kg Carton",
+    category: "fruits",
+    origin: "Ecuador",
+    type: "Regular",
+    unit: "Carton",
+    marketAvg: 62,
+    myPrice: 56,
+    image: U("bananas bunch"),
+    badgeColor: "bg-yellow-500",
+    packaging: "13kg Carton",
+    freshness: "Ripening Controlled",
+    about:
+      "Consistent size bananas—great for breakfast buffets, smoothie bars and grocery supply.",
+  },
   {
     id: "grapes-india",
     name: "Green Grapes (India)",
@@ -200,13 +196,12 @@ export const PRODUCTS: Product[] = [
     unit: "Box",
     marketAvg: 78,
     myPrice: 69,
-    image:
-      "https://commons.wikimedia.org/wiki/Special:FilePath/Grapes.jpg",
+    image: U("green grapes"),
     badgeColor: "bg-emerald-600",
     packaging: "4.5kg Box",
     freshness: "Cold Chain Delivered",
     about:
-      "Sweet seedless grapes for desserts and fruit platters. Stored and delivered via cold chain.",
+      "Sweet seedless grapes for desserts and fruit platters—handled in cold chain.",
   },
   {
     id: "orange-egypt",
@@ -218,13 +213,12 @@ export const PRODUCTS: Product[] = [
     unit: "Carton",
     marketAvg: 75,
     myPrice: 68,
-    image:
-      "https://commons.wikimedia.org/wiki/Special:FilePath/Orange-Fruit-Pieces.jpg",
+    image: U("oranges"),
     badgeColor: "bg-orange-600",
     packaging: "15kg Carton",
     freshness: "Import Batch Today",
     about:
-      "Juicy Valencia oranges with consistent sweetness—perfect for juice stations and hotel breakfast service.",
+      "Juicy oranges with consistent sweetness—perfect for juice stations and breakfast service.",
   },
   {
     id: "pineapple-ph",
@@ -236,13 +230,12 @@ export const PRODUCTS: Product[] = [
     unit: "Carton",
     marketAvg: 92,
     myPrice: 84,
-    image:
-      "https://commons.wikimedia.org/wiki/Special:FilePath/Pineapple_and_cross_section.jpg",
+    image: U("pineapple"),
     badgeColor: "bg-amber-600",
     packaging: "12pcs Carton",
     freshness: "Chilled Import Stock",
     about:
-      "Sweet pineapples with good yield for juice and dessert counters. Great for hotels and catering.",
+      "Sweet pineapples with good yield for juice and dessert counters—ideal for catering.",
   },
 
   // ----------------------------
@@ -258,29 +251,32 @@ export const PRODUCTS: Product[] = [
     unit: "Tray",
     marketAvg: 19,
     myPrice: 16.5,
-    image:
-      "https://commons.wikimedia.org/wiki/Special:FilePath/Brown_eggs.jpg",
+    image: U("brown eggs tray"),
     badgeColor: "bg-neutral-700",
     packaging: "30 pcs Tray",
     freshness: "Collected Today",
     about:
-      "Locally sourced brown eggs with stable daily availability—perfect for bakeries, cafes, and breakfast operations.",
+      "Locally sourced brown eggs—perfect for bakeries, cafes and breakfast operations.",
   },
- {
-  id: "white-eggs-uae",
-  name: "White Eggs (UAE)",
-  subtitle: "Daily Supply • 30 pcs Tray",
-  category: "eggs",
-  origin: "UAE",
-  type: "Regular",
-  unit: "Tray",
-  marketAvg: 0,
-  myPrice: 0,
-  image: "https://images.unsplash.com/photo-1587486912758-4367d2017d6c?auto=format&fit=crop&w=1600&q=80",
-  badgeColor: "bg-neutral-700",
-},
   {
-    id: "quail-eggs",
+    id: "white-eggs-uae",
+    name: "White Eggs (UAE)",
+    subtitle: "Daily Supply • 30 pcs Tray",
+    category: "eggs",
+    origin: "UAE",
+    type: "Regular",
+    unit: "Tray",
+    marketAvg: 18,
+    myPrice: 15.5,
+    image: U("white eggs tray"),
+    badgeColor: "bg-neutral-700",
+    packaging: "30 pcs Tray",
+    freshness: "Daily Delivery",
+    about:
+      "Clean white eggs with stable daily supply—best for restaurants and supermarkets.",
+  },
+  {
+    id: "quail-eggs-uae",
     name: "Quail Eggs",
     subtitle: "Premium Pack • 24 pcs",
     category: "eggs",
@@ -289,19 +285,19 @@ export const PRODUCTS: Product[] = [
     unit: "Pack",
     marketAvg: 28,
     myPrice: 24,
-    image:
-      "https://commons.wikimedia.org/wiki/Special:FilePath/Quail_eggs.jpg",
+    image: U("quail eggs"),
     badgeColor: "bg-zinc-800",
     packaging: "24 pcs Pack",
     freshness: "Chilled Stock",
     about:
-      "Popular for gourmet plating and premium catering. Clean packed and delivered in chilled conditions.",
+      "Popular for gourmet plating and premium catering—packed clean and delivered chilled.",
   },
-    // ----------------------------
-  // SPICES
+
+  // ----------------------------
+  // SPICES (WHOLE / POWDER)
   // ----------------------------
   {
-    id: "cardamom",
+    id: "cardamom-green",
     name: "Cardamom (Green)",
     subtitle: "Aromatic Pods • 1kg Pack",
     category: "spices",
@@ -310,31 +306,27 @@ export const PRODUCTS: Product[] = [
     unit: "KG",
     marketAvg: 0,
     myPrice: 0,
-    image:
-      "https://images.unsplash.com/photo-1625944525092-11b5cc7f7b5b?auto=format&fit=crop&w=1600&q=80",
+    image: U("green cardamom pods"),
     badgeColor: "bg-emerald-700",
     packaging: "1kg Pack",
     freshness: "Sealed Pack",
-    about:
-      "Premium green cardamom with strong aroma—ideal for tea, desserts, and biryani masala.",
+    about: "Premium green cardamom—ideal for tea, desserts and masala blends.",
   },
   {
     id: "black-pepper",
     name: "Black Pepper",
-    subtitle: "Bold Flavor • 1kg Pack",
+    subtitle: "Whole Peppercorn • 1kg Pack",
     category: "spices",
     origin: "Vietnam",
     type: "Regular",
     unit: "KG",
     marketAvg: 0,
     myPrice: 0,
-    image:
-      "https://images.unsplash.com/photo-1615486363973-672b5f9f1c8b?auto=format&fit=crop&w=1600&q=80",
+    image: U("black pepper peppercorns"),
     badgeColor: "bg-neutral-800",
     packaging: "1kg Pack",
     freshness: "Sealed Pack",
-    about:
-      "Whole peppercorns for restaurants and commercial kitchens—fresh, pungent and consistent quality.",
+    about: "Whole peppercorns with strong pungency—perfect for kitchens and grinders.",
   },
   {
     id: "turmeric",
@@ -346,13 +338,11 @@ export const PRODUCTS: Product[] = [
     unit: "KG",
     marketAvg: 0,
     myPrice: 0,
-    image:
-      "https://images.unsplash.com/photo-1615485925600-9724cc7a7b2b?auto=format&fit=crop&w=1600&q=80",
+    image: U("turmeric powder"),
     badgeColor: "bg-yellow-600",
     packaging: "1kg Pack",
     freshness: "Sealed Pack",
-    about:
-      "Bright color and rich aroma—perfect for curries, marinades and daily bulk cooking.",
+    about: "Bright color and aroma—best for curries, marinades and bulk cooking.",
   },
   {
     id: "clove",
@@ -364,16 +354,14 @@ export const PRODUCTS: Product[] = [
     unit: "KG",
     marketAvg: 0,
     myPrice: 0,
-    image:
-      "https://images.unsplash.com/photo-1604335399105-b0c3c2f2c8f2?auto=format&fit=crop&w=1600&q=80",
-    badgeColor: "bg-amber-700",
+    image: U("cloves spice"),
+    badgeColor: "bg-amber-800",
     packaging: "1kg Pack",
     freshness: "Sealed Pack",
-    about:
-      "Whole clove buds—great for biryani, tea, spice blends and premium catering use.",
+    about: "Whole clove buds—great for biryani, tea and spice mixes.",
   },
   {
-    id: "cinnamon",
+    id: "cinnamon-sticks",
     name: "Cinnamon Sticks",
     subtitle: "Whole Sticks • 1kg Pack",
     category: "spices",
@@ -382,13 +370,11 @@ export const PRODUCTS: Product[] = [
     unit: "KG",
     marketAvg: 0,
     myPrice: 0,
-    image:
-      "https://images.unsplash.com/photo-1600459429297-68df86b1a7e2?auto=format&fit=crop&w=1600&q=80",
+    image: U("cinnamon sticks"),
     badgeColor: "bg-orange-700",
     packaging: "1kg Pack",
     freshness: "Sealed Pack",
-    about:
-      "Premium cinnamon sticks—perfect for desserts, beverages and aromatic spice mixes.",
+    about: "Premium cinnamon sticks—perfect for desserts, beverages and aroma-rich cooking.",
   },
   {
     id: "bay-leaf",
@@ -400,31 +386,27 @@ export const PRODUCTS: Product[] = [
     unit: "Pack",
     marketAvg: 0,
     myPrice: 0,
-    image:
-      "https://images.unsplash.com/photo-1604908812571-2f7cfbbf89c6?auto=format&fit=crop&w=1600&q=80",
+    image: U("bay leaves"),
     badgeColor: "bg-green-700",
     packaging: "500g Pack",
     freshness: "Sealed Pack",
-    about:
-      "Aromatic bay leaves for soups, curries and rice dishes—clean and packed for bulk kitchens.",
+    about: "Clean bay leaves for soups, curries and rice dishes—packed for bulk kitchens.",
   },
   {
     id: "star-anise",
     name: "Star Anise",
-    subtitle: "Whole Flower • 1kg Pack",
+    subtitle: "Whole Spice • 1kg Pack",
     category: "spices",
     origin: "China",
     type: "Regular",
     unit: "KG",
     marketAvg: 0,
     myPrice: 0,
-    image:
-      "https://images.unsplash.com/photo-1615485925644-25e72f8e7c44?auto=format&fit=crop&w=1600&q=80",
+    image: U("star anise"),
     badgeColor: "bg-yellow-900",
     packaging: "1kg Pack",
     freshness: "Sealed Pack",
-    about:
-      "Strong aroma and premium look—ideal for biryani masala and spice blends.",
+    about: "Strong aroma—ideal for biryani masala and premium spice blends.",
   },
 
   // ----------------------------
@@ -433,38 +415,34 @@ export const PRODUCTS: Product[] = [
   {
     id: "cashew",
     name: "Cashew Nuts",
-    subtitle: "Premium Whole • 10kg Carton",
+    subtitle: "Whole Premium • 10kg Carton",
     category: "nuts",
     origin: "Vietnam",
     type: "Regular",
     unit: "Carton",
     marketAvg: 0,
     myPrice: 0,
-    image:
-      "https://images.unsplash.com/photo-1599599810694-bb3a3b1d4b6b?auto=format&fit=crop&w=1600&q=80",
+    image: U("cashew nuts"),
     badgeColor: "bg-amber-600",
     packaging: "10kg Carton",
     freshness: "Sealed Carton",
-    about:
-      "Premium whole cashews for sweets, snacks, and bulk kitchen usage.",
+    about: "Whole cashews for sweets, snacks and bulk kitchen use.",
   },
   {
     id: "almond",
     name: "Almond",
-    subtitle: "California Grade • 10kg Carton",
+    subtitle: "Premium Grade • 10kg Carton",
     category: "nuts",
     origin: "USA",
     type: "Regular",
     unit: "Carton",
     marketAvg: 0,
     myPrice: 0,
-    image:
-      "https://images.unsplash.com/photo-1615485925878-c8d7a3a3f2bd?auto=format&fit=crop&w=1600&q=80",
+    image: U("almonds"),
     badgeColor: "bg-rose-700",
     packaging: "10kg Carton",
     freshness: "Sealed Carton",
-    about:
-      "Crunchy premium almonds for bakeries, cafes and retail packs.",
+    about: "Crunchy almonds for bakeries, cafes and retail packing.",
   },
   {
     id: "walnut",
@@ -476,13 +454,11 @@ export const PRODUCTS: Product[] = [
     unit: "Carton",
     marketAvg: 0,
     myPrice: 0,
-    image:
-      "https://images.unsplash.com/photo-1599599810720-2f2b6d3d6e7a?auto=format&fit=crop&w=1600&q=80",
+    image: U("walnuts"),
     badgeColor: "bg-stone-700",
     packaging: "10kg Carton",
     freshness: "Sealed Carton",
-    about:
-      "Premium shelled walnuts—perfect for desserts, salads and healthy mixes.",
+    about: "Premium walnuts—perfect for desserts, salads and healthy mixes.",
   },
   {
     id: "dates",
@@ -494,13 +470,11 @@ export const PRODUCTS: Product[] = [
     unit: "Box",
     marketAvg: 0,
     myPrice: 0,
-    image:
-      "https://images.unsplash.com/photo-1604908554131-2c8d12c8e9f6?auto=format&fit=crop&w=1600&q=80",
+    image: U("dates fruit"),
     badgeColor: "bg-amber-800",
     packaging: "5kg Box",
     freshness: "Packed Fresh",
-    about:
-      "Soft premium dates for gifting, retail, and hotel breakfast service.",
+    about: "Soft premium dates for retail, gifting and hotel breakfast service.",
   },
   {
     id: "raisins",
@@ -512,31 +486,27 @@ export const PRODUCTS: Product[] = [
     unit: "Pack",
     marketAvg: 0,
     myPrice: 0,
-    image:
-      "https://images.unsplash.com/photo-1604908553783-9b5c16d2a2fd?auto=format&fit=crop&w=1600&q=80",
+    image: U("golden raisins"),
     badgeColor: "bg-yellow-700",
     packaging: "5kg Pack",
     freshness: "Sealed Pack",
-    about:
-      "Sweet golden raisins for bakeries, desserts and bulk mixes.",
+    about: "Golden raisins for bakeries, desserts and bulk mixes.",
   },
   {
     id: "pista",
     name: "Pistachio",
-    subtitle: "Roasted • 10kg Carton",
+    subtitle: "Premium • 10kg Carton",
     category: "nuts",
     origin: "Iran",
     type: "Regular",
     unit: "Carton",
     marketAvg: 0,
     myPrice: 0,
-    image:
-      "https://images.unsplash.com/photo-1599599810833-7f447ddb5f9b?auto=format&fit=crop&w=1600&q=80",
+    image: U("pistachios"),
     badgeColor: "bg-lime-700",
     packaging: "10kg Carton",
     freshness: "Sealed Carton",
-    about:
-      "Premium pistachios for sweets, ice cream and retail packs.",
+    about: "Premium pistachios for sweets, ice cream, bakeries and retail packs.",
   },
 
   // ----------------------------
@@ -552,13 +522,11 @@ export const PRODUCTS: Product[] = [
     unit: "Tin",
     marketAvg: 0,
     myPrice: 0,
-    image:
-      "https://images.unsplash.com/photo-1615485925712-2cbe4c1f0a2c?auto=format&fit=crop&w=1600&q=80",
+    image: U("olive oil bottle"),
     badgeColor: "bg-green-700",
     packaging: "5L Tin",
     freshness: "Sealed Pack",
-    about:
-      "Premium olive oil for salads, kitchens and horeca supply.",
+    about: "Premium olive oil for salads, cooking and horeca supply.",
   },
   {
     id: "sunflower-oil",
@@ -570,13 +538,11 @@ export const PRODUCTS: Product[] = [
     unit: "Bottle",
     marketAvg: 0,
     myPrice: 0,
-    image:
-      "https://images.unsplash.com/photo-1625944525117-8c5a2dbf7b52?auto=format&fit=crop&w=1600&q=80",
+    image: U("sunflower oil bottle"),
     badgeColor: "bg-yellow-600",
     packaging: "5L Bottle",
     freshness: "Sealed Pack",
-    about:
-      "Everyday cooking oil for restaurants and bulk kitchens.",
+    about: "Everyday cooking oil for restaurants and bulk kitchens.",
   },
   {
     id: "groundnut-oil",
@@ -588,13 +554,11 @@ export const PRODUCTS: Product[] = [
     unit: "Bottle",
     marketAvg: 0,
     myPrice: 0,
-    image:
-      "https://images.unsplash.com/photo-1604908553697-61a2a6d52c42?auto=format&fit=crop&w=1600&q=80",
+    image: U("peanut oil bottle"),
     badgeColor: "bg-orange-700",
     packaging: "5L Bottle",
     freshness: "Sealed Pack",
-    about:
-      "Great for frying and high-heat cooking with clean taste.",
+    about: "Good for frying and high-heat cooking with a clean taste.",
   },
   {
     id: "sesame-oil",
@@ -606,13 +570,10 @@ export const PRODUCTS: Product[] = [
     unit: "Bottle",
     marketAvg: 0,
     myPrice: 0,
-    image:
-      "https://images.unsplash.com/photo-1604908553628-0e8c6f0c54fd?auto=format&fit=crop&w=1600&q=80",
+    image: U("sesame oil bottle"),
     badgeColor: "bg-amber-700",
     packaging: "1L Bottle",
     freshness: "Sealed Pack",
-    about:
-      "Aromatic sesame oil for flavor-rich cooking and marinades.",
+    about: "Aromatic sesame oil—best for flavor-rich cooking and marinades.",
   },
-
 ];
