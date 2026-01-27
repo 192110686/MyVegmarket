@@ -190,7 +190,7 @@ export default function CategoryClient({ category }: { category: string }) {
                 {/* Price box */}
                 <div className="rounded-2xl p-4 mb-5 border border-[#e0e8e3] bg-[#f6f8f7]">
                   <div className="flex justify-between items-center mb-2 text-[11px] font-bold text-[#648770] uppercase">
-                    <span>Dubai Market Avg.</span>
+                    <span>AL AWEER RATE</span>
                     <span className="line-through">AED {p.marketAvg.toFixed(2)}</span>
                   </div>
 

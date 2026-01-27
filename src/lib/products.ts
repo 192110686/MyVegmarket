@@ -8,8 +8,8 @@ export type Product = {
   origin: string;
   type: "Organic" | "Regular";
   unit: string;
-  marketAvg: number;
-  myPrice: number;
+  marketAvg: number; // Al Aweer Rate
+  myPrice: number;   // MyVegMarket Price
   image: string;
   badgeColor: string;
   about?: string;
@@ -18,29 +18,47 @@ export type Product = {
 };
 
 export const PRODUCTS: Product[] = [
-  // Vegetables
+  // ----------------------------
+  // VEGETABLES
+  // ----------------------------
   {
-    id: "tomato-local",
-    name: "Cherry Tomatoes (Local)",
-    subtitle: "Premium Hydroponic Grade • 1.5kg Box",
+    id: "tomato-uae",
+    name: "Tomato (Local)",
+    subtitle: "Fresh Daily Supply • Per KG",
     category: "vegetables",
     origin: "UAE",
-    type: "Organic",
-    unit: "Box",
-    marketAvg: 18.5,
-    myPrice: 14.25,
-    image:
-      "https://images.unsplash.com/photo-1546470427-e26264be0b95?auto=format&fit=crop&w=1600&q=80",
+    type: "Regular",
+    unit: "KG",
+    marketAvg: 9.5,
+    myPrice: 6.75,
+    image: "https://commons.wikimedia.org/wiki/Special:FilePath/Tomatoes.jpg",
     badgeColor: "bg-red-600",
-    packaging: "1.5kg Box",
-    freshness: "Harvested 24h ago",
+    packaging: "Per KG",
+    freshness: "Arrived This Morning",
     about:
-      "Hand-picked and packed fresh for premium kitchens. Consistent quality, clean grading, and stable supply for daily operations.",
+      "Fresh local tomatoes with consistent sizing and firmness—ideal for restaurants, cafeterias, and daily bulk cooking.",
   },
   {
-    id: "bellpepper-nl",
-    name: "Holland Bell Peppers",
-    subtitle: "Mixed Colors (Red, Yellow) • 5kg Carton",
+    id: "cucumber-uae",
+    name: "Cucumber (Local)",
+    subtitle: "Crisp & Clean • 5kg Carton",
+    category: "vegetables",
+    origin: "UAE",
+    type: "Regular",
+    unit: "Carton",
+    marketAvg: 22,
+    myPrice: 18.5,
+    image: "https://commons.wikimedia.org/wiki/Special:FilePath/Cucumber.jpg",
+    badgeColor: "bg-green-700",
+    packaging: "5kg Carton",
+    freshness: "Harvested 24h ago",
+    about:
+      "Crisp cucumbers suitable for salads, juice bars, and hotel kitchens. Stable supply and clean grading.",
+  },
+  {
+    id: "bell-pepper-nl",
+    name: "Bell Peppers Mix (Netherlands)",
+    subtitle: "Red/Yellow/Green • 5kg Carton",
     category: "vegetables",
     origin: "Netherlands",
     type: "Regular",
@@ -48,33 +66,15 @@ export const PRODUCTS: Product[] = [
     marketAvg: 85,
     myPrice: 72,
     image:
-      "https://images.unsplash.com/photo-1567306226416-28f0efdc88ce?auto=format&fit=crop&w=1600&q=80",
-    badgeColor: "bg-orange-500",
+      "https://commons.wikimedia.org/wiki/Special:FilePath/Bell_peppers.jpg",
+    badgeColor: "bg-emerald-700",
     packaging: "5kg Carton",
-    freshness: "Import Batch Today",
+    freshness: "Chilled Import Stock",
     about:
-      "Mixed-color premium peppers with firm texture and vibrant color. Ideal for hotels, restaurants, and bulk menus.",
+      "Premium mixed bell peppers—great for premium restaurants, salad bars, and grill menus. Bright color & crunch.",
   },
   {
-    id: "iceberg-jo",
-    name: "Iceberg Lettuce",
-    subtitle: "Premium Export Grade • Per KG",
-    category: "vegetables",
-    origin: "Jordan",
-    type: "Regular",
-    unit: "KG",
-    marketAvg: 9.5,
-    myPrice: 6.75,
-    image:
-      "https://images.unsplash.com/photo-1524594152303-9fd13543fe6e?auto=format&fit=crop&w=1600&q=80",
-    badgeColor: "bg-green-700",
-    packaging: "Per KG",
-    freshness: "Arrived This Morning",
-    about:
-      "Fresh iceberg lettuce, crisp and clean. Great for salads and sandwich chains requiring consistent crunch.",
-  },
-  {
-    id: "onion-om",
+    id: "onion-red-oman",
     name: "Red Onions (Oman)",
     subtitle: "Medium Size • 10kg Bag",
     category: "vegetables",
@@ -83,38 +83,127 @@ export const PRODUCTS: Product[] = [
     unit: "Bag",
     marketAvg: 32,
     myPrice: 26.5,
-    image:
-      "https://images.unsplash.com/photo-1518977956812-cd3dbadaaf31?auto=format&fit=crop&w=1600&q=80",
+    image: "https://commons.wikimedia.org/wiki/Special:FilePath/Onion.jpg",
     badgeColor: "bg-red-800",
     packaging: "10kg Bag",
     freshness: "Daily Supply",
     about:
-      "Stable daily onion supply with consistent sizing, perfect for large kitchens and bulk meal production.",
+      "Stable daily onion supply with consistent sizing, ideal for large kitchens and bulk meal production.",
   },
-
-  // Fruits
   {
-    id: "berries-us",
-    name: "Mixed Berries",
-    subtitle: "Premium Box • 1kg",
-    category: "fruits",
-    origin: "USA",
-    type: "Organic",
-    unit: "Box",
-    marketAvg: 58,
+    id: "potato-egypt",
+    name: "Potato (Egypt)",
+    subtitle: "Washed & Graded • 10kg Bag",
+    category: "vegetables",
+    origin: "Egypt",
+    type: "Regular",
+    unit: "Bag",
+    marketAvg: 28,
+    myPrice: 23,
+    image:
+      "https://commons.wikimedia.org/wiki/Special:FilePath/Potato.jpg",
+    badgeColor: "bg-amber-700",
+    packaging: "10kg Bag",
+    freshness: "New Batch This Week",
+    about:
+      "Clean graded potatoes—perfect for fries, mash, and bulk prep. Reliable quality for hotels and catering.",
+  },
+  {
+    id: "carrot-aus",
+    name: "Carrot (Australia)",
+    subtitle: "Crunchy & Sweet • 10kg Bag",
+    category: "vegetables",
+    origin: "Australia",
+    type: "Regular",
+    unit: "Bag",
+    marketAvg: 38,
+    myPrice: 32,
+    image:
+      "https://commons.wikimedia.org/wiki/Special:FilePath/Carrot.jpg",
+    badgeColor: "bg-orange-600",
+    packaging: "10kg Bag",
+    freshness: "Chilled Storage",
+    about:
+      "Premium carrots with consistent texture—great for salads, juices, and soup bases in commercial kitchens.",
+  },
+  {
+    id: "broccoli-china",
+    name: "Broccoli (Import)",
+    subtitle: "Fresh Heads • 5kg Carton",
+    category: "vegetables",
+    origin: "China",
+    type: "Regular",
+    unit: "Carton",
+    marketAvg: 55,
     myPrice: 49,
     image:
-      "https://images.unsplash.com/photo-1464965911861-746a04b4bca6?auto=format&fit=crop&w=1600&q=80",
-    badgeColor: "bg-pink-600",
-    packaging: "1kg Box",
-    freshness: "Cold Chain Delivered",
+      "https://commons.wikimedia.org/wiki/Special:FilePath/Broccoli.jpg",
+    badgeColor: "bg-green-800",
+    packaging: "5kg Carton",
+    freshness: "Arrived This Week",
     about:
-      "Premium organic berries for desserts, smoothie bars and catering. Stored and delivered in cold chain.",
+      "Fresh broccoli heads suitable for steaming, stir fry, and meal-prep menus. Uniform size and stable supply.",
+  },
+
+  // ----------------------------
+  // FRUITS
+  // ----------------------------
+  {
+    id: "apple-turkey",
+    name: "Apple (Turkey)",
+    subtitle: "Crisp & Sweet • 18kg Carton",
+    category: "fruits",
+    origin: "Turkey",
+    type: "Regular",
+    unit: "Carton",
+    marketAvg: 95,
+    myPrice: 86,
+    image: "https://commons.wikimedia.org/wiki/Special:FilePath/Apple.jpg",
+    badgeColor: "bg-red-600",
+    packaging: "18kg Carton",
+    freshness: "Import Batch Today",
+    about:
+      "Premium apples with strong crunch and long shelf life—ideal for hotels, offices, and retail supply.",
   },
   {
-    id: "oranges-eg",
-    name: "Valencia Oranges",
-    subtitle: "Fresh Import • 15kg Carton",
+    id: "banana-ecuador",
+    name: "Banana (Ecuador)",
+    subtitle: "Premium Grade • 13kg Carton",
+    category: "fruits",
+    origin: "Ecuador",
+    type: "Regular",
+    unit: "Carton",
+    marketAvg: 62,
+    myPrice: 56,
+    image: "https://commons.wikimedia.org/wiki/Special:FilePath/Banana.jpg",
+    badgeColor: "bg-yellow-500",
+    packaging: "13kg Carton",
+    freshness: "Ripening Controlled",
+    about:
+      "Consistent size and quality bananas—excellent for breakfast buffets, smoothie bars, and grocery supply.",
+  },
+  {
+    id: "grapes-india",
+    name: "Green Grapes (India)",
+    subtitle: "Seedless • 4.5kg Box",
+    category: "fruits",
+    origin: "India",
+    type: "Regular",
+    unit: "Box",
+    marketAvg: 78,
+    myPrice: 69,
+    image:
+      "https://commons.wikimedia.org/wiki/Special:FilePath/Grapes.jpg",
+    badgeColor: "bg-emerald-600",
+    packaging: "4.5kg Box",
+    freshness: "Cold Chain Delivered",
+    about:
+      "Sweet seedless grapes for desserts and fruit platters. Stored and delivered via cold chain.",
+  },
+  {
+    id: "orange-egypt",
+    name: "Valencia Oranges (Egypt)",
+    subtitle: "Juice Grade • 15kg Carton",
     category: "fruits",
     origin: "Egypt",
     type: "Regular",
@@ -122,19 +211,39 @@ export const PRODUCTS: Product[] = [
     marketAvg: 75,
     myPrice: 68,
     image:
-      "https://images.unsplash.com/photo-1589927986089-35812388d1f4?auto=format&fit=crop&w=1600&q=80",
+      "https://commons.wikimedia.org/wiki/Special:FilePath/Orange-Fruit-Pieces.jpg",
     badgeColor: "bg-orange-600",
     packaging: "15kg Carton",
     freshness: "Import Batch Today",
     about:
-      "Juicy Valencia oranges with consistent sweetness. Ideal for juice stations and hotel breakfast service.",
+      "Juicy Valencia oranges with consistent sweetness—perfect for juice stations and hotel breakfast service.",
+  },
+  {
+    id: "pineapple-ph",
+    name: "Pineapple (Philippines)",
+    subtitle: "Golden Sweet • 12pcs Carton",
+    category: "fruits",
+    origin: "Philippines",
+    type: "Regular",
+    unit: "Carton",
+    marketAvg: 92,
+    myPrice: 84,
+    image:
+      "https://commons.wikimedia.org/wiki/Special:FilePath/Pineapple_and_cross_section.jpg",
+    badgeColor: "bg-amber-600",
+    packaging: "12pcs Carton",
+    freshness: "Chilled Import Stock",
+    about:
+      "Sweet pineapples with good yield for juice and dessert counters. Great for hotels and catering.",
   },
 
-  // Eggs
+  // ----------------------------
+  // EGGS
+  // ----------------------------
   {
-    id: "eggs-uae",
-    name: "Farm Fresh Eggs",
-    subtitle: "Free-range • 30 pcs Tray",
+    id: "eggs-brown-uae",
+    name: "Brown Eggs (UAE)",
+    subtitle: "Farm Fresh • 30 pcs Tray",
     category: "eggs",
     origin: "UAE",
     type: "Organic",
@@ -142,11 +251,47 @@ export const PRODUCTS: Product[] = [
     marketAvg: 19,
     myPrice: 16.5,
     image:
-      "https://images.unsplash.com/photo-1587486912758-4367d2017d6c?auto=format&fit=crop&w=1600&q=80",
+      "https://commons.wikimedia.org/wiki/Special:FilePath/Brown_eggs.jpg",
     badgeColor: "bg-neutral-700",
     packaging: "30 pcs Tray",
     freshness: "Collected Today",
     about:
-      "Locally sourced eggs with stable daily availability. Perfect for bakeries, cafes, and bulk breakfast operations.",
+      "Locally sourced brown eggs with stable daily availability—perfect for bakeries, cafes, and breakfast operations.",
+  },
+  {
+    id: "eggs-white-uae",
+    name: "White Eggs (UAE)",
+    subtitle: "Daily Supply • 30 pcs Tray",
+    category: "eggs",
+    origin: "UAE",
+    type: "Regular",
+    unit: "Tray",
+    marketAvg: 17,
+    myPrice: 14.75,
+    image:
+      "https://commons.wikimedia.org/wiki/Special:FilePath/Eggs_in_a_basket.jpg",
+    badgeColor: "bg-slate-700",
+    packaging: "30 pcs Tray",
+    freshness: "Daily Collection",
+    about:
+      "Cost-effective white eggs for bulk kitchens and catering. Consistent weight and reliable supply.",
+  },
+  {
+    id: "quail-eggs",
+    name: "Quail Eggs",
+    subtitle: "Premium Pack • 24 pcs",
+    category: "eggs",
+    origin: "UAE",
+    type: "Regular",
+    unit: "Pack",
+    marketAvg: 28,
+    myPrice: 24,
+    image:
+      "https://commons.wikimedia.org/wiki/Special:FilePath/Quail_eggs.jpg",
+    badgeColor: "bg-zinc-800",
+    packaging: "24 pcs Pack",
+    freshness: "Chilled Stock",
+    about:
+      "Popular for gourmet plating and premium catering. Clean packed and delivered in chilled conditions.",
   },
 ];
