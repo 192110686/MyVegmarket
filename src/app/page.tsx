@@ -1,5 +1,6 @@
 "use client";
 
+import React from "react";
 import Link from "next/link";
 
 export default function Home() {
@@ -25,7 +26,7 @@ export default function Home() {
                 </h1>
 
                 <p className="text-white/90 text-lg md:text-xl font-medium max-w-2xl leading-relaxed">
-                 Get fresh produce with live market prices and reliable delivery across the UAE
+                  Get fresh produce with live market prices and reliable delivery across the UAE
                 </p>
 
                 <div className="flex flex-wrap gap-4 mt-4">
@@ -49,135 +50,78 @@ export default function Home() {
         </section>
 
         {/* CATEGORIES */}
-              {/* CATEGORIES */}
-<section className="px-6 lg:px-20 py-24">
-  <div className="max-w-[1440px] mx-auto">
-    <div className="flex justify-between items-end mb-12 px-2">
-      <div>
-        <p className="text-[#C8A951] font-bold text-xs uppercase tracking-[0.2em] mb-3">
-          The Selection
-        </p>
-        <h2 className="text-4xl md:text-5xl font-extrabold text-[#0B5D1E]">
-          Premium Categories
-        </h2>
-      </div>
+        <section className="px-6 lg:px-20 py-24">
+          <div className="max-w-[1440px] mx-auto">
+            <div className="flex justify-between items-end mb-12 px-2">
+              <div>
+                <p className="text-[#C8A951] font-bold text-xs uppercase tracking-[0.2em] mb-3">
+                  The Selection
+                </p>
+                <h2 className="text-4xl md:text-5xl font-extrabold text-[#0B5D1E]">
+                  Premium Categories
+                </h2>
+              </div>
 
-      <Link
-        href="/products/vegetables"
-        className="text-[#1db954] text-sm font-bold flex items-center gap-1 hover:underline underline-offset-4"
-      >
-        Browse all →
-      </Link>
-    </div>
-
-    {(() => {
-      const CATS = [
-        {
-          key: "vegetables",
-          title: "Vegetables",
-          subtitle: "Daily fresh supply",
-          href: "/products/vegetables",
-          img: `https://source.unsplash.com/1200x900/?vegetables,basket&sig=11`,
-        },
-        {
-          key: "fruits",
-          title: "Fruits",
-          subtitle: "Imports & seasonal",
-          href: "/products/fruits",
-          img: `https://source.unsplash.com/1200x900/?fruits,bowl&sig=12`,
-        },
-        {
-          key: "spices",
-          title: "Spices",
-          subtitle: "Whole & powdered",
-          href: "/products/spices",
-          img: `https://source.unsplash.com/1200x900/?spices,masala&sig=13`,
-        },
-        {
-          key: "nuts",
-          title: "Nuts",
-          subtitle: "Dry fruits & premium",
-          href: "/products/nuts",
-          img: `https://source.unsplash.com/1200x900/?nuts,dryfruits&sig=14`,
-        },
-        {
-          key: "eggs",
-          title: "Eggs",
-          subtitle: "Farm fresh supply",
-          href: "/products/eggs",
-          img: `https://source.unsplash.com/1200x900/?eggs,basket&sig=15`,
-        },
-        {
-          key: "oils",
-          title: "Oils",
-          subtitle: "Cooking essentials",
-          href: "/products/oils",
-          img: `https://source.unsplash.com/1200x900/?cooking-oil,bottle&sig=16`,
-        },
-      ];
-
-      return (
-        <>
-          {/* Horizontal Scroll Row */}
-          <div className="flex gap-8 overflow-x-auto pb-4 px-2 snap-x snap-mandatory scroll-smooth categories-scroll">
-            {CATS.map((c) => (
               <Link
-                key={c.key}
-                href={c.href}
-                className="group relative overflow-hidden rounded-[2.2rem] bg-black snap-start shrink-0
-                           w-[280px] sm:w-[320px] md:w-[340px] aspect-[4/5]"
+                href="/products/vegetables"
+                className="text-[#1db954] text-sm font-bold flex items-center gap-1 hover:underline underline-offset-4"
               >
-                <img
-                  src={c.img}
-                  alt={c.title}
-                  className="absolute inset-0 w-full h-full object-cover scale-[1.02] group-hover:scale-[1.08] transition-transform duration-700"
-                  loading="lazy"
-                  onError={(e) => {
-                    (e.currentTarget as HTMLImageElement).src =
-                      "https://images.unsplash.com/photo-1542838132-92c53300491e?auto=format&fit=crop&w=1600&q=80";
-                  }}
-                />
-
-                {/* dark fade like reference */}
-                <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/35 to-transparent" />
-
-                {/* subtle border glow on hover */}
-                <div className="absolute inset-0 rounded-[2.2rem] ring-2 ring-transparent group-hover:ring-[#C8A951]/80 transition-all duration-500" />
-
-                {/* text bottom-left like reference */}
-                <div className="absolute bottom-8 left-8 right-8">
-                  <h3 className="text-white text-2xl font-extrabold leading-tight">
-                    {c.title}
-                  </h3>
-                  <p className="text-white/75 text-sm font-medium mt-2">
-                    {c.subtitle}
-                  </p>
-                </div>
+                Browse all →
               </Link>
-            ))}
+            </div>
+
+            <CategoryRow
+              items={[
+                {
+                  key: "vegetables",
+                  title: "Vegetables",
+                  subtitle: "Daily fresh supply",
+                  href: "/products/vegetables",
+                  img: "https://source.unsplash.com/1200x900/?vegetables,fresh&sig=21",
+                },
+                {
+                  key: "fruits",
+                  title: "Fruits",
+                  subtitle: "Imports & seasonal",
+                  href: "/products/fruits",
+                  img: "https://source.unsplash.com/1200x900/?fruits,seasonal&sig=22",
+                },
+                {
+                  key: "spices",
+                  title: "Spices",
+                  subtitle: "Whole & powdered",
+                  href: "/products/spices",
+                  img: "https://source.unsplash.com/1200x900/?spices,masala&sig=23",
+                },
+                {
+                  key: "nuts",
+                  title: "Nuts",
+                  subtitle: "Dry fruits & premium",
+                  href: "/products/nuts",
+                  img: "https://source.unsplash.com/1200x900/?nuts,dryfruits&sig=24",
+                },
+                {
+                  key: "eggs",
+                  title: "Eggs",
+                  subtitle: "Farm fresh supply",
+                  href: "/products/eggs",
+                  img: "https://source.unsplash.com/1200x900/?eggs,tray&sig=25",
+                },
+                {
+                  key: "oils",
+                  title: "Oils",
+                  subtitle: "Cooking essentials",
+                  href: "/products/oils",
+                  img: "https://source.unsplash.com/1200x900/?olive-oil,cooking&sig=26",
+                },
+              ]}
+            />
+
+            <p className="text-[#648770] text-sm font-medium mt-3 px-2">
+              Tip: Scroll horizontally to explore all categories →
+            </p>
           </div>
-
-          {/* Tip text like your screenshot */}
-          <p className="text-[#648770] text-sm font-medium mt-3 px-2">
-            Tip: Scroll horizontally to explore all categories →
-          </p>
-
-          {/* Hide scrollbar nicely */}
-          <style jsx>{`
-            .categories-scroll {
-              scrollbar-width: none;
-              -ms-overflow-style: none;
-            }
-            .categories-scroll::-webkit-scrollbar {
-              display: none;
-            }
-          `}</style>
-        </>
-      );
-    })()}
-  </div>
-</section>
-
+        </section>
 
         {/* SERVICES */}
         <section className="px-6 lg:px-20 py-28 bg-[#f8faf9]">
@@ -186,7 +130,7 @@ export default function Home() {
               Our Services
             </h2>
             <p className="text-[#648770] text-lg max-w-2xl mx-auto font-medium">
-             Complete support for UAE food businesses — from small cafes to big hotel groups.
+              Complete support for UAE food businesses — from small cafes to big hotel groups.
             </p>
 
             <Link
@@ -204,8 +148,7 @@ export default function Home() {
             <div
               className="absolute top-0 right-0 w-1/3 h-full opacity-10 pointer-events-none"
               style={{
-                backgroundImage:
-                  "radial-gradient(circle, #C8A951 1px, transparent 1px)",
+                backgroundImage: "radial-gradient(circle, #C8A951 1px, transparent 1px)",
                 backgroundSize: "24px 24px",
               }}
             />
@@ -216,8 +159,7 @@ export default function Home() {
                   Ready to source smarter?
                 </h2>
                 <p className="text-white/80 text-xl font-medium">
-                  Join 500+ UAE businesses receiving our daily premium commodity
-                  forecast.
+                  Join 500+ UAE businesses receiving our daily premium commodity forecast.
                 </p>
               </div>
 
@@ -236,5 +178,109 @@ export default function Home() {
         </section>
       </main>
     </div>
+  );
+}
+
+/** ✅ Single row. 3 visible on desktop. Drag + wheel + touchpad + mobile swipe */
+function CategoryRow({
+  items,
+}: {
+  items: { key: string; title: string; subtitle: string; href: string; img: string }[];
+}) {
+  const ref = React.useRef<HTMLDivElement | null>(null);
+  const isDown = React.useRef(false);
+  const startX = React.useRef(0);
+  const startScroll = React.useRef(0);
+
+  const onPointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
+    const el = ref.current;
+    if (!el) return;
+    isDown.current = true;
+    el.setPointerCapture(e.pointerId);
+    startX.current = e.clientX;
+    startScroll.current = el.scrollLeft;
+  };
+
+  const onPointerMove = (e: React.PointerEvent<HTMLDivElement>) => {
+    const el = ref.current;
+    if (!el || !isDown.current) return;
+    const dx = e.clientX - startX.current;
+    el.scrollLeft = startScroll.current - dx;
+  };
+
+  const onPointerUp = () => {
+    isDown.current = false;
+  };
+
+  const onWheel = (e: React.WheelEvent<HTMLDivElement>) => {
+    const el = ref.current;
+    if (!el) return;
+
+    // Convert vertical wheel to horizontal scroll (trackpad/mouse wheel)
+    if (Math.abs(e.deltaY) > Math.abs(e.deltaX)) {
+      e.preventDefault();
+      el.scrollLeft += e.deltaY;
+    }
+  };
+
+  return (
+    <>
+      <div
+        ref={ref}
+        onPointerDown={onPointerDown}
+        onPointerMove={onPointerMove}
+        onPointerUp={onPointerUp}
+        onPointerCancel={onPointerUp}
+        onWheel={onWheel}
+        className="categories-scroll flex gap-8 overflow-x-auto pb-4 px-2 snap-x snap-mandatory scroll-smooth select-none cursor-grab active:cursor-grabbing"
+        style={{ WebkitOverflowScrolling: "touch", touchAction: "pan-x" }}
+      >
+        {items.map((c) => (
+          <Link
+            key={c.key}
+            href={c.href}
+            className="
+              group relative overflow-hidden rounded-[2.2rem] bg-black snap-start shrink-0
+              w-[78%] sm:w-[46%] lg:w-[calc((100%-4rem)/3)]
+              aspect-[4/5]
+            "
+            draggable={false}
+          >
+            <img
+              src={c.img}
+              alt={c.title}
+              draggable={false}
+              className="absolute inset-0 w-full h-full object-cover scale-[1.02] group-hover:scale-[1.08] transition-transform duration-700"
+              loading="lazy"
+              onError={(e) => {
+                (e.currentTarget as HTMLImageElement).src =
+                  "https://images.unsplash.com/photo-1542838132-92c53300491e?auto=format&fit=crop&w=1600&q=80";
+              }}
+            />
+            <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/35 to-transparent" />
+            <div className="absolute inset-0 rounded-[2.2rem] ring-2 ring-transparent group-hover:ring-[#C8A951]/80 transition-all duration-500" />
+
+            <div className="absolute bottom-8 left-8 right-8">
+              <h3 className="text-white text-2xl font-extrabold leading-tight">
+                {c.title}
+              </h3>
+              <p className="text-white/75 text-sm font-medium mt-2">
+                {c.subtitle}
+              </p>
+            </div>
+          </Link>
+        ))}
+      </div>
+
+      <style jsx>{`
+        .categories-scroll {
+          scrollbar-width: none;
+          -ms-overflow-style: none;
+        }
+        .categories-scroll::-webkit-scrollbar {
+          display: none;
+        }
+      `}</style>
+    </>
   );
 }
