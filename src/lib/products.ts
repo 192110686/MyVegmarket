@@ -165,23 +165,24 @@ export const PRODUCTS: Product[] = [
     about:
       "Premium apples with strong crunch and long shelf life—ideal for hotels, offices, and retail supply.",
   },
-  {
-    id: "banana-ecuador",
-    name: "Banana (Ecuador)",
-    subtitle: "Premium Grade • 13kg Carton",
-    category: "fruits",
-    origin: "Ecuador",
-    type: "Regular",
-    unit: "Carton",
-    marketAvg: 62,
-    myPrice: 56,
-    image: "https://commons.wikimedia.org/wiki/Special:FilePath/Banana.jpg",
-    badgeColor: "bg-yellow-500",
-    packaging: "13kg Carton",
-    freshness: "Ripening Controlled",
-    about:
-      "Consistent size and quality bananas—excellent for breakfast buffets, smoothie bars, and grocery supply.",
-  },
+ {
+  id: "banana-ecuador",
+  name: "Banana (Ecuador)",
+  subtitle: "Premium Grade • 13kg Carton",
+  category: "fruits",
+  origin: "Ecuador",
+  type: "Regular",
+  unit: "Carton",
+  marketAvg: 62,
+  myPrice: 56,
+  image: "https://commons.wikimedia.org/wiki/Special:FilePath/Banana_and_cross_section.jpg",
+  badgeColor: "bg-yellow-500",
+  packaging: "13kg Carton",
+  freshness: "Ripening Controlled",
+  about:
+    "Consistent size and quality bananas—excellent for breakfast buffets, smoothie bars, and grocery supply.",
+},
+
   {
     id: "grapes-india",
     name: "Green Grapes (India)",
