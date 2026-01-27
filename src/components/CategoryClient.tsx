@@ -4,6 +4,9 @@ import Link from "next/link";
 import { useMemo, useState } from "react";
 import { PRODUCTS, Product, ProductCategory } from "@/lib/products";
 
+import jsPDF from "jspdf";
+import autoTable from "jspdf-autotable";
+
 const CATEGORY_META: Record<ProductCategory, { title: string; desc: string }> = {
   vegetables: {
     title: "Vegetables",
@@ -20,7 +23,15 @@ const CATEGORY_META: Record<ProductCategory, { title: string; desc: string }> = 
 };
 
 function safeImg(url: string) {
-  return url || "https://images.unsplash.com/photo-1542838132-92c53300491e?auto=format&fit=crop&w=1600&q=80";
+  return (
+    url ||
+    "https://images.unsplash.com/photo-1542838132-92c53300491e?auto=format&fit=crop&w=1600&q=80"
+  );
+}
+
+function formatAED(n: number) {
+  const num = Number.isFinite(n) ? n : 0;
+  return `AED ${num.toFixed(2)}`;
 }
 
 export default function CategoryClient({ category }: { category: string }) {
@@ -36,7 +47,9 @@ export default function CategoryClient({ category }: { category: string }) {
   const [sort, setSort] = useState<"low" | "high">("low");
 
   const origins = useMemo(() => {
-    const set = new Set(PRODUCTS.filter((p) => p.category === cat).map((p) => p.origin));
+    const set = new Set(
+      PRODUCTS.filter((p) => p.category === cat).map((p) => p.origin)
+    );
     return ["All", ...Array.from(set)];
   }, [cat]);
 
@@ -45,16 +58,78 @@ export default function CategoryClient({ category }: { category: string }) {
 
     if (search.trim()) {
       const s = search.toLowerCase();
-      list = list.filter((p) => p.name.toLowerCase().includes(s) || p.subtitle.toLowerCase().includes(s));
+      list = list.filter(
+        (p) =>
+          p.name.toLowerCase().includes(s) ||
+          p.subtitle.toLowerCase().includes(s) ||
+          p.origin.toLowerCase().includes(s)
+      );
     }
 
     if (origin !== "All") list = list.filter((p) => p.origin === origin);
     if (type !== "All") list = list.filter((p) => p.type === type);
 
-    list = [...list].sort((a, b) => (sort === "low" ? a.myPrice - b.myPrice : b.myPrice - a.myPrice));
+    list = [...list].sort((a, b) =>
+      sort === "low" ? a.myPrice - b.myPrice : b.myPrice - a.myPrice
+    );
 
     return list;
   }, [cat, search, origin, type, sort]);
+
+  const handleDownloadPdf = () => {
+    try {
+      const doc = new jsPDF({ orientation: "p", unit: "pt", format: "a4" });
+
+      const title = `MyVegMarket - ${meta.title} Price Report`;
+      const generated = `Generated: ${new Date().toLocaleString()}`;
+
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(16);
+      doc.text(title, 40, 44);
+
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(10);
+      doc.text(generated, 40, 62);
+
+      const rows = filtered.map((p) => {
+        const savePct =
+          p.marketAvg && p.marketAvg > 0
+            ? (((p.marketAvg - p.myPrice) / p.marketAvg) * 100).toFixed(1)
+            : "0.0";
+
+        return [
+          p.name,
+          p.origin,
+          p.unit,
+          formatAED(p.marketAvg),
+          formatAED(p.myPrice),
+          `${savePct}%`,
+        ];
+      });
+
+      autoTable(doc, {
+        startY: 80,
+        head: [["Product", "Origin", "Unit", "Al Aweer Rate", "MyVegMarket", "Save"]],
+        body: rows,
+        styles: { fontSize: 9, cellPadding: 6 },
+        headStyles: { fillColor: [29, 185, 84], textColor: [255, 255, 255] },
+        columnStyles: {
+          0: { cellWidth: 170 },
+          1: { cellWidth: 80 },
+          2: { cellWidth: 60 },
+          3: { cellWidth: 90 },
+          4: { cellWidth: 90 },
+          5: { cellWidth: 60 },
+        },
+      });
+
+      const fileName = `myvegmarket-${cat}-price-report.pdf`;
+      doc.save(fileName);
+    } catch (err) {
+      console.error(err);
+      alert("PDF generation failed. Check console for details.");
+    }
+  };
 
   return (
     <main className="bg-[#f6f8f7] min-h-screen px-6 lg:px-20 pt-10 pb-24">
@@ -79,7 +154,11 @@ export default function CategoryClient({ category }: { category: string }) {
             </p>
           </div>
 
-          <button className="flex items-center gap-2 rounded-full h-12 px-6 bg-white border border-[#e0e8e3] text-[#111713] font-bold shadow-sm hover:shadow-md transition-all">
+          <button
+            type="button"
+            onClick={handleDownloadPdf}
+            className="flex items-center gap-2 rounded-full h-12 px-6 bg-white border border-[#e0e8e3] text-[#111713] font-bold shadow-sm hover:shadow-md transition-all"
+          >
             <span className="material-symbols-outlined">download</span>
             <span>Price Report (PDF)</span>
           </button>
@@ -169,7 +248,10 @@ export default function CategoryClient({ category }: { category: string }) {
                 </div>
 
                 {/* Fav */}
-                <button className="absolute top-3 right-3 w-9 h-9 bg-white/95 rounded-full flex items-center justify-center text-[#648770] hover:text-red-500 transition-colors shadow-sm">
+                <button
+                  type="button"
+                  className="absolute top-3 right-3 w-9 h-9 bg-white/95 rounded-full flex items-center justify-center text-[#648770] hover:text-red-500 transition-colors shadow-sm"
+                >
                   <span className="material-symbols-outlined text-[20px]">
                     favorite
                   </span>
@@ -191,7 +273,7 @@ export default function CategoryClient({ category }: { category: string }) {
                 <div className="rounded-2xl p-4 mb-5 border border-[#e0e8e3] bg-[#f6f8f7]">
                   <div className="flex justify-between items-center mb-2 text-[11px] font-bold text-[#648770] uppercase">
                     <span>AL AWEER RATE</span>
-                    <span className="line-through">AED {p.marketAvg.toFixed(2)}</span>
+                    <span className="line-through">{formatAED(p.marketAvg)}</span>
                   </div>
 
                   <div className="flex justify-between items-end">
@@ -199,7 +281,7 @@ export default function CategoryClient({ category }: { category: string }) {
                       MyVegMarket Price
                     </span>
                     <span className="text-2xl font-black text-[#1db954]">
-                      AED {p.myPrice.toFixed(2)}
+                      {formatAED(p.myPrice)}
                     </span>
                   </div>
                 </div>
@@ -213,11 +295,17 @@ export default function CategoryClient({ category }: { category: string }) {
                     View Details
                   </Link>
 
-                  <button className="w-11 h-11 rounded-full border border-[#e0e8e3] flex items-center justify-center text-[#111713] hover:bg-[#f0f4f2] transition-colors">
+                  <button
+                    type="button"
+                    className="w-11 h-11 rounded-full border border-[#e0e8e3] flex items-center justify-center text-[#111713] hover:bg-[#f0f4f2] transition-colors"
+                  >
                     <span className="material-symbols-outlined">call</span>
                   </button>
 
-                  <button className="w-11 h-11 rounded-full border border-[#e0e8e3] flex items-center justify-center text-[#1db954] hover:bg-[#f0f4f2] transition-colors">
+                  <button
+                    type="button"
+                    className="w-11 h-11 rounded-full border border-[#e0e8e3] flex items-center justify-center text-[#1db954] hover:bg-[#f0f4f2] transition-colors"
+                  >
                     <span className="material-symbols-outlined">forum</span>
                   </button>
                 </div>
@@ -234,7 +322,10 @@ export default function CategoryClient({ category }: { category: string }) {
           <div className="w-full max-w-xs h-1.5 bg-[#f0f4f2] rounded-full overflow-hidden">
             <div className="w-[40%] h-full bg-[#1db954] rounded-full" />
           </div>
-          <button className="mt-4 min-w-[220px] h-12 bg-white border border-[#e0e8e3] rounded-full font-bold text-sm shadow-sm hover:bg-[#f0f4f2] transition-colors">
+          <button
+            type="button"
+            className="mt-4 min-w-[220px] h-12 bg-white border border-[#e0e8e3] rounded-full font-bold text-sm shadow-sm hover:bg-[#f0f4f2] transition-colors"
+          >
             Load More Results
           </button>
         </div>
