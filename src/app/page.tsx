@@ -162,9 +162,6 @@ export default function Home() {
     })()}
   </div>
 </section>
-
-     
-
         {/* SERVICES */}
         <section className="px-6 lg:px-20 py-28 bg-[#f8faf9]">
           <div className="max-w-[1440px] mx-auto text-center mb-20">
