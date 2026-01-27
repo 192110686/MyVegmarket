@@ -51,7 +51,7 @@ export default function Navbar() {
           <div className="w-11 h-11 rounded-full bg-[#0B5D1E] flex items-center justify-center text-white">
             <span className="material-symbols-outlined">eco</span>
           </div>
-          MyVegMarket
+          MyVegmarket
         </Link>
 
         {/* Search */}

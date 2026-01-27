@@ -13,7 +13,7 @@ export default function Footer() {
                   eco
                 </span>
               </span>
-              <span className="text-[#0B5D1E]">MyVegMarket</span>
+              <span className="text-[#0B5D1E]">MyVegmarket</span>
             </div>
 
             <p className="text-sm text-[#648770] leading-6 max-w-xs">
@@ -74,7 +74,7 @@ export default function Footer() {
         </div>
 
         <div className="mt-12 pt-8 border-t border-[#e7efe9] text-xs text-[#648770] flex flex-col sm:flex-row items-center justify-between gap-4">
-          <p>© 2024 MyVegMarket Dubai. All rights reserved.</p>
+          <p>© 2024 MyVegmarket Dubai. All rights reserved.</p>
 
           <div className="flex items-center gap-4">
             <button className="hover:text-[#1db954]">
