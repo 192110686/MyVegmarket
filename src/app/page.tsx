@@ -49,163 +49,121 @@ export default function Home() {
         </section>
 
         {/* CATEGORIES */}
-                {/* CATEGORIES */}
-        <section className="px-6 lg:px-20 py-24">
-          <div className="max-w-[1440px] mx-auto">
-            <div className="flex justify-between items-end mb-12 px-2">
-              <div>
-                <h2 className="text-4xl md:text-5xl font-extrabold text-[#0B5D1E]">
-                  Categories
-                </h2>
+               {/* CATEGORIES */}
+<section className="px-6 lg:px-20 py-24">
+  <div className="max-w-[1440px] mx-auto">
+    <div className="flex justify-between items-end mb-12 px-2">
+      <div>
+        <p className="text-[#C8A951] font-bold text-xs uppercase tracking-[0.2em] mb-3">
+          The Selection
+        </p>
+        <h2 className="text-4xl md:text-5xl font-extrabold text-[#0B5D1E]">
+          Premium Categories
+        </h2>
+      </div>
+
+      <Link
+        href="/products/vegetables"
+        className="text-[#1db954] text-sm font-bold flex items-center gap-1 hover:underline underline-offset-4"
+      >
+        Browse all →
+      </Link>
+    </div>
+
+    {/* helper to avoid same image caching */}
+    {/*
+      NOTE: Keep this helper inside the component OR move it above return.
+      It prevents “same image for every card” issue.
+    */}
+    {(() => {
+      const CATS = [
+        {
+          key: "vegetables",
+          title: "Vegetables",
+          subtitle: "Daily fresh supply",
+          href: "/products/vegetables",
+          img: `https://source.unsplash.com/1200x900/?vegetables,basket&sig=11`,
+        },
+        {
+          key: "fruits",
+          title: "Fruits",
+          subtitle: "Imports & seasonal",
+          href: "/products/fruits",
+          img: `https://source.unsplash.com/1200x900/?fruits,bowl&sig=12`,
+        },
+        {
+          key: "spices",
+          title: "Spices",
+          subtitle: "Whole & powdered",
+          href: "/products/spices",
+          img: `https://source.unsplash.com/1200x900/?spices,masala&sig=13`,
+        },
+        {
+          key: "nuts",
+          title: "Nuts",
+          subtitle: "Dry fruits & premium",
+          href: "/products/nuts",
+          img: `https://source.unsplash.com/1200x900/?nuts,dryfruits&sig=14`,
+        },
+        {
+          key: "eggs",
+          title: "Eggs",
+          subtitle: "Farm fresh supply",
+          href: "/products/eggs",
+          img: `https://source.unsplash.com/1200x900/?eggs,basket&sig=15`,
+        },
+        {
+          key: "oils",
+          title: "Oils",
+          subtitle: "Cooking essentials",
+          href: "/products/oils",
+          img: `https://source.unsplash.com/1200x900/?cooking-oil,bottle&sig=16`,
+        },
+      ];
+
+      return (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
+          {CATS.map((c) => (
+            <Link
+              key={c.key}
+              href={c.href}
+              className="group relative overflow-hidden rounded-[2.2rem] aspect-[4/5] bg-black"
+            >
+              <img
+                src={c.img}
+                alt={c.title}
+                className="absolute inset-0 w-full h-full object-cover scale-[1.02] group-hover:scale-[1.08] transition-transform duration-700"
+                loading="lazy"
+                onError={(e) => {
+                  (e.currentTarget as HTMLImageElement).src =
+                    "https://images.unsplash.com/photo-1542838132-92c53300491e?auto=format&fit=crop&w=1600&q=80";
+                }}
+              />
+
+              {/* dark fade like reference */}
+              <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/35 to-transparent" />
+
+              {/* subtle border glow on hover */}
+              <div className="absolute inset-0 rounded-[2.2rem] ring-2 ring-transparent group-hover:ring-[#C8A951]/80 transition-all duration-500" />
+
+              {/* text bottom-left like reference */}
+              <div className="absolute bottom-8 left-8 right-8">
+                <h3 className="text-white text-2xl font-extrabold leading-tight">
+                  {c.title}
+                </h3>
+                <p className="text-white/75 text-sm font-medium mt-2">
+                  {c.subtitle}
+                </p>
               </div>
+            </Link>
+          ))}
+        </div>
+      );
+    })()}
+  </div>
+</section>
 
-              <Link
-                href="/products/vegetables"
-                className="text-[#1db954] text-sm font-bold flex items-center gap-1 hover:underline underline-offset-4"
-              >
-                Browse all →
-              </Link>
-            </div>
-
-            {/* Premium Horizontal Scroll */}
-            <div className="relative">
-              {/* soft edge fades */}
-              <div className="pointer-events-none absolute left-0 top-0 h-full w-10 bg-gradient-to-r from-white to-transparent z-10" />
-              <div className="pointer-events-none absolute right-0 top-0 h-full w-10 bg-gradient-to-l from-white to-transparent z-10" />
-
-              <div className="flex gap-6 overflow-x-auto pb-4 pr-2 snap-x snap-mandatory [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
-                {/* helper card component style repeated */}
-
-                {/* Vegetables */}
-                <Link
-                  href="/products/vegetables"
-                  className="snap-start group relative min-w-[280px] md:min-w-[320px] aspect-[4/5] overflow-hidden rounded-[2.5rem] cursor-pointer"
-                >
-                  <img
-                    src="https://images.unsplash.com/photo-1540420773420-3366772f4999?auto=format&fit=crop&w=1600&q=80"
-                    className="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-transform duration-700"
-                    alt="Fresh Vegetables"
-                  />
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/30 to-transparent" />
-                  <div className="absolute inset-0 border-4 border-transparent group-hover:border-[#C8A951] transition-all duration-500 rounded-[2.5rem]" />
-                  <div className="absolute bottom-10 left-10 right-10">
-                    <h3 className="text-white text-2xl font-bold mb-2">
-                      Vegetables
-                    </h3>
-                    <p className="text-white/80 text-sm font-medium">
-                      Daily fresh supply
-                    </p>
-                  </div>
-                </Link>
-
-                {/* Fruits */}
-                <Link
-                  href="/products/fruits"
-                  className="snap-start group relative min-w-[280px] md:min-w-[320px] aspect-[4/5] overflow-hidden rounded-[2.5rem] cursor-pointer"
-                >
-                  <img
-                    src="https://images.unsplash.com/photo-1610832958506-aa56368176cf?auto=format&fit=crop&w=1600&q=80"
-                    className="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-transform duration-700"
-                    alt="Fresh Fruits"
-                  />
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/30 to-transparent" />
-                  <div className="absolute inset-0 border-4 border-transparent group-hover:border-[#C8A951] transition-all duration-500 rounded-[2.5rem]" />
-                  <div className="absolute bottom-10 left-10 right-10">
-                    <h3 className="text-white text-2xl font-bold mb-2">Fruits</h3>
-                    <p className="text-white/80 text-sm font-medium">
-                      Imports & seasonal
-                    </p>
-                  </div>
-                </Link>
-
-                {/* Spices */}
-                <Link
-                  href="/products/spices"
-                  className="snap-start group relative min-w-[280px] md:min-w-[320px] aspect-[4/5] overflow-hidden rounded-[2.5rem] cursor-pointer"
-                >
-                  <img
-                    src="https://images.unsplash.com/photo-1596040033229-a9821ebd058d?auto=format&fit=crop&w=1600&q=80"
-                    className="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-transform duration-700"
-                    alt="Spices"
-                  />
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/30 to-transparent" />
-                  <div className="absolute inset-0 border-4 border-transparent group-hover:border-[#C8A951] transition-all duration-500 rounded-[2.5rem]" />
-                  <div className="absolute bottom-10 left-10 right-10">
-                    <h3 className="text-white text-2xl font-bold mb-2">Spices</h3>
-                    <p className="text-white/80 text-sm font-medium">
-                      Whole & powdered
-                    </p>
-                  </div>
-                </Link>
-
-                {/* Nuts */}
-                <Link
-                  href="/products/nuts"
-                  className="snap-start group relative min-w-[280px] md:min-w-[320px] aspect-[4/5] overflow-hidden rounded-[2.5rem] cursor-pointer"
-                >
-                  <img
-                    src="https://images.unsplash.com/photo-1502741338009-cac2772e18bc?auto=format&fit=crop&w=1600&q=80"
-                    className="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-transform duration-700"
-                    alt="Nuts"
-                  />
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/30 to-transparent" />
-                  <div className="absolute inset-0 border-4 border-transparent group-hover:border-[#C8A951] transition-all duration-500 rounded-[2.5rem]" />
-                  <div className="absolute bottom-10 left-10 right-10">
-                    <h3 className="text-white text-2xl font-bold mb-2">Nuts</h3>
-                    <p className="text-white/80 text-sm font-medium">
-                      Dry fruits & premium
-                    </p>
-                  </div>
-                </Link>
-
-                {/* Eggs */}
-                <Link
-                  href="/products/eggs"
-                  className="snap-start group relative min-w-[280px] md:min-w-[320px] aspect-[4/5] overflow-hidden rounded-[2.5rem] cursor-pointer"
-                >
-                  <img
-                    src="https://images.unsplash.com/photo-1518569656558-1f25e69d93d4?auto=format&fit=crop&w=1600&q=80"
-                    className="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-transform duration-700"
-                    alt="Eggs"
-                  />
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/30 to-transparent" />
-                  <div className="absolute inset-0 border-4 border-transparent group-hover:border-[#C8A951] transition-all duration-500 rounded-[2.5rem]" />
-                  <div className="absolute bottom-10 left-10 right-10">
-                    <h3 className="text-white text-2xl font-bold mb-2">Eggs</h3>
-                    <p className="text-white/80 text-sm font-medium">
-                      Daily trays & packs
-                    </p>
-                  </div>
-                </Link>
-
-                {/* Oils */}
-                <Link
-                  href="/products/oils"
-                  className="snap-start group relative min-w-[280px] md:min-w-[320px] aspect-[4/5] overflow-hidden rounded-[2.5rem] cursor-pointer"
-                >
-                  <img
-                    src="https://images.unsplash.com/photo-1514996937319-344454492b37?auto=format&fit=crop&w=1600&q=80"
-                    className="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-transform duration-700"
-                    alt="Cooking Oils"
-                  />
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/30 to-transparent" />
-                  <div className="absolute inset-0 border-4 border-transparent group-hover:border-[#C8A951] transition-all duration-500 rounded-[2.5rem]" />
-                  <div className="absolute bottom-10 left-10 right-10">
-                    <h3 className="text-white text-2xl font-bold mb-2">Oils</h3>
-                    <p className="text-white/80 text-sm font-medium">
-                      Bulk kitchen supply
-                    </p>
-                  </div>
-                </Link>
-              </div>
-
-              {/* hint text */}
-              <p className="mt-4 text-sm font-medium text-[#648770] px-2">
-                Tip: Scroll horizontally to explore all categories →
-              </p>
-            </div>
-          </div>
-        </section>
+     
 
         {/* SERVICES */}
         <section className="px-6 lg:px-20 py-28 bg-[#f8faf9]">
