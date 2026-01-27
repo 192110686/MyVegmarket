@@ -54,11 +54,8 @@ export default function Home() {
           <div className="max-w-[1440px] mx-auto">
             <div className="flex justify-between items-end mb-12 px-2">
               <div>
-                <p className="text-[#C8A951] font-bold text-xs uppercase tracking-[0.2em] mb-3">
-                  The Selection
-                </p>
                 <h2 className="text-4xl md:text-5xl font-extrabold text-[#0B5D1E]">
-                  Premium Categories
+                  Categories
                 </h2>
               </div>
 
@@ -118,7 +115,7 @@ export default function Home() {
             />
 
             <p className="text-[#648770] text-sm font-medium mt-3 px-2">
-              Tip: Scroll horizontally to explore all categories →
+              Scroll horizontally to explore all categories →
             </p>
           </div>
         </section>
