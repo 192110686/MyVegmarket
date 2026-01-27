@@ -17,9 +17,8 @@ export default function Footer() {
             </div>
 
             <p className="text-sm text-[#648770] leading-6 max-w-xs">
-              Dubai&apos;s premier digital marketplace for fresh produce.
-              Bridging the gap between wholesale markets and your business with
-              real-time price transparency.
+              Dubai&apos;s trusted sourcing platform for fresh produce. 
+              We connect exporters and wholesale suppliers directly to your business with clear daily pricing.
             </p>
           </div>
 
@@ -68,9 +67,8 @@ export default function Footer() {
               CONTACT US
             </h4>
             <div className="flex flex-col gap-3 text-sm text-[#648770] font-medium">
-              <p>Al Aweer Fruit Market, Dubai</p>
-              <p>+971 4 123 4567</p>
-              <p>Mon - Sat: 4 AM - 10 PM</p>
+              <p>S & Y Global Trading L.L.C</p>
+              <p>+971 56 333 7535</p>
             </div>
           </div>
         </div>

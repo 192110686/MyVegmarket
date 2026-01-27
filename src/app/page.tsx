@@ -132,11 +132,10 @@ export default function Home() {
         <section className="px-6 lg:px-20 py-28 bg-[#f8faf9]">
           <div className="max-w-[1440px] mx-auto text-center mb-20">
             <h2 className="text-5xl font-extrabold text-[#0B5D1E] mb-6">
-              Our Professional Services
+              Our Services
             </h2>
             <p className="text-[#648770] text-lg max-w-2xl mx-auto font-medium">
-              The ultimate infrastructure for UAE’s F&B sector, from boutique cafes
-              to hospitality groups.
+             Complete support for UAE food businesses — from small cafes to big hotel groups.
             </p>
 
             <Link

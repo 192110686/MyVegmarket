@@ -17,7 +17,7 @@ export default function ServicesPage() {
         <div className="mb-10">
           <h1 className="text-5xl font-black text-[#111713]">Our Services</h1>
           <p className="text-[#648770] text-lg font-medium mt-3 max-w-2xl leading-8">
-            Built for restaurants, supermarkets, hotels, caterers & retailers in the UAE.
+            Built for exporters, restaurants, supermarkets, hotels, caterers & retailers across the UAE.
           </p>
         </div>
 
@@ -34,7 +34,7 @@ export default function ServicesPage() {
               icon: "shopping_cart",
               title: "Bulk Supply & Sourcing",
               desc: "High-volume sourcing from verified farms and suppliers with daily consistency.",
-              points: ["Cold chain delivery", "Reliable supply", "Custom packaging"],
+              points: ["supply chain logistics", "Reliable supply", "Custom packaging"],
             },
             {
               icon: "analytics",
