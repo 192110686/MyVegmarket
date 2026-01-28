@@ -134,23 +134,49 @@ export default function Home() {
         </section>
 
         {/* SERVICES */}
-        <section className="px-6 lg:px-20 py-28 bg-[#f8faf9]">
-          <div className="max-w-[1440px] mx-auto text-center mb-20">
-            <h2 className="text-5xl font-extrabold text-[#0B5D1E] mb-6">
-              Our Services
-            </h2>
-            <p className="text-[#648770] text-lg max-w-2xl mx-auto font-medium">
-              Complete support for UAE food businesses — from small cafes to big hotel groups.
-            </p>
+     <section className="bg-white py-20">
+  <div className="max-w-[1400px] mx-auto px-6 lg:px-20">
+    <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 items-start">
+      {/* LEFT: Title */}
+      <div className="lg:col-span-4">
+        <h2 className="text-6xl font-black text-[#0B5D1E] leading-[1]">
+          Our Services
+        </h2>
+      </div>
 
-            <Link
-              href="/services"
-              className="inline-flex mt-8 bg-[#1db954] text-white text-sm font-bold h-12 px-10 rounded-full items-center justify-center hover:opacity-90"
-            >
-              View Services
-            </Link>
-          </div>
-        </section>
+      {/* RIGHT: Content */}
+      <div className="lg:col-span-8">
+        <p className="text-[#648770] text-xl font-medium leading-relaxed max-w-3xl">
+         MyVegMarket supports UAE groceries, restaurants, and wholesalers with clear market visibility — and helps exporters 
+         plan smarter shipments with real wholesale signals from Dubai markets.Track category-wise movement, 
+         compare rates, and make confident buying or export decisions backed by daily pricing intelligence.
+        </p>
+
+        <p className="text-[#648770] text-lg font-medium leading-relaxed max-w-3xl mt-5">
+         For exporters, this means better timing and better margins: understand demand shifts, spot price momentum early,
+         and plan packing and container dispatch for profitable export. For UAE businesses, it means predictable 
+         procurement — consistent sourcing, better negotiation, and smoother season-wide supply planning.
+        </p>
+
+        <p className="text-[#6f8f7c] text-base font-semibold mt-6">
+          Built for exporters • wholesalers • supermarkets • hotels • cloud kitchens • caterers
+        </p>
+
+        {/* Button aligned with paragraph (right column) */}
+        <div className="mt-10">
+          <Link
+            href="/services"
+            className="inline-flex items-center justify-center bg-[#1db954] text-white font-extrabold text-sm h-12 px-10 rounded-full hover:opacity-95 transition-opacity"
+          >
+            View Services
+          </Link>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+
 
         {/* CTA SUBSCRIBE */}
         <section className="px-6 lg:px-20 py-24">
