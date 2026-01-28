@@ -34,7 +34,6 @@ const CATEGORY_META: Record<ProductCategory, { title: string; desc: string }> = 
   },
 };
 
-
 function safeImg(url: string) {
   return (
     url ||
@@ -49,8 +48,17 @@ function formatAED(n: number) {
 
 function parseCategory(raw: string): ProductCategory {
   const c = (raw || "").toLowerCase();
-  const allowed: ProductCategory[] = ["vegetables", "fruits", "spices", "nuts", "eggs", "oils"];
-  return (allowed.includes(c as ProductCategory) ? (c as ProductCategory) : "vegetables");
+  const allowed: ProductCategory[] = [
+    "vegetables",
+    "fruits",
+    "spices",
+    "nuts",
+    "eggs",
+    "oils",
+  ];
+  return allowed.includes(c as ProductCategory)
+    ? (c as ProductCategory)
+    : "vegetables";
 }
 
 export default function CategoryClient({ category }: { category: string }) {
@@ -62,7 +70,10 @@ export default function CategoryClient({ category }: { category: string }) {
   const [type, setType] = useState<"All" | "Organic" | "Regular">("All");
   const [sort, setSort] = useState<"low" | "high">("low");
 
-  const baseList = useMemo(() => PRODUCTS.filter((p) => p.category === cat), [cat]);
+  const baseList = useMemo(
+    () => PRODUCTS.filter((p) => p.category === cat),
+    [cat]
+  );
 
   const origins = useMemo(() => {
     const set = new Set(baseList.map((p) => p.origin));
@@ -88,7 +99,9 @@ export default function CategoryClient({ category }: { category: string }) {
     if (showOriginFilter && origin !== "All") list = list.filter((p) => p.origin === origin);
     if (showTypeFilter && type !== "All") list = list.filter((p) => p.type === type);
 
-    list.sort((a, b) => (sort === "low" ? a.myPrice - b.myPrice : b.myPrice - a.myPrice));
+    list.sort((a, b) =>
+      sort === "low" ? a.myPrice - b.myPrice : b.myPrice - a.myPrice
+    );
     return list;
   }, [baseList, search, origin, type, sort, showOriginFilter, showTypeFilter]);
 
@@ -107,7 +120,6 @@ export default function CategoryClient({ category }: { category: string }) {
       doc.setFontSize(10);
       doc.text(generated, 40, 62);
 
-      // Totals + savings summary
       const totalMarket = filtered.reduce((sum, p) => sum + (p.marketAvg || 0), 0);
       const totalMy = filtered.reduce((sum, p) => sum + (p.myPrice || 0), 0);
       const totalSave = Math.max(0, totalMarket - totalMy);
@@ -116,23 +128,34 @@ export default function CategoryClient({ category }: { category: string }) {
       doc.setFont("helvetica", "bold");
       doc.setFontSize(11);
       doc.text(
-        `Summary: Items ${filtered.length}   |   Total Al Aweer: ${formatAED(totalMarket)}   |   Total MyVegMarket: ${formatAED(
-          totalMy
-        )}   |   Savings: ${formatAED(totalSave)} (${savePct.toFixed(1)}%)`,
+        `Summary: Items ${filtered.length}   |   Total Market: ${formatAED(
+          totalMarket
+        )}   |   Total MyVegMarket: ${formatAED(totalMy)}   |   Savings: ${formatAED(
+          totalSave
+        )} (${savePct.toFixed(1)}%)`,
         40,
         78
       );
 
       const rows = filtered.map((p) => {
         const savePctRow =
-          p.marketAvg && p.marketAvg > 0 ? (((p.marketAvg - p.myPrice) / p.marketAvg) * 100).toFixed(1) : "0.0";
+          p.marketAvg && p.marketAvg > 0
+            ? (((p.marketAvg - p.myPrice) / p.marketAvg) * 100).toFixed(1)
+            : "0.0";
 
-        return [p.name, p.origin, p.unit, formatAED(p.marketAvg), formatAED(p.myPrice), `${savePctRow}%`];
+        return [
+          p.name,
+          p.origin,
+          p.unit,
+          formatAED(p.marketAvg),
+          formatAED(p.myPrice),
+          `${savePctRow}%`,
+        ];
       });
 
       autoTable(doc, {
         startY: 95,
-        head: [["Product", "Origin", "Unit", "Al Aweer Rate", "MyVegMarket", "Save"]],
+        head: [["Product", "Origin", "Unit", "Market Rate", "MyVegMarket", "Save"]],
         body: rows,
         styles: { fontSize: 9, cellPadding: 6 },
         headStyles: { fillColor: [29, 185, 84], textColor: [255, 255, 255] },
@@ -153,6 +176,9 @@ export default function CategoryClient({ category }: { category: string }) {
     }
   };
 
+  const rateLabel =
+    cat === "vegetables" || cat === "fruits" ? "AL AWEER RATE" : "MARKET RATE";
+
   return (
     <main className="bg-[#f6f8f7] min-h-screen px-6 lg:px-20 pt-10 pb-24">
       <div className="max-w-[1400px] mx-auto">
@@ -168,8 +194,12 @@ export default function CategoryClient({ category }: { category: string }) {
         {/* Heading */}
         <div className="flex flex-wrap justify-between items-end gap-6 mb-8">
           <div className="max-w-2xl">
-            <h1 className="text-5xl font-black tracking-tight text-[#111713] leading-[1.05]">{meta.title}</h1>
-            <p className="text-[#648770] text-lg font-medium mt-3 max-w-xl">{meta.desc}</p>
+            <h1 className="text-5xl font-black tracking-tight text-[#111713] leading-[1.05]">
+              {meta.title}
+            </h1>
+            <p className="text-[#648770] text-lg font-medium mt-3 max-w-xl">
+              {meta.desc}
+            </p>
           </div>
 
           <button
@@ -238,7 +268,9 @@ export default function CategoryClient({ category }: { category: string }) {
               </select>
             </div>
 
-            <div className="text-sm font-medium text-[#648770]">Showing {filtered.length} results</div>
+            <div className="text-sm font-medium text-[#648770]">
+              Showing {filtered.length} results
+            </div>
           </div>
         </div>
 
@@ -268,19 +300,42 @@ export default function CategoryClient({ category }: { category: string }) {
 
               <div className="p-5 flex flex-col flex-1">
                 <div className="mb-4">
-                  <h3 className="text-lg font-extrabold leading-tight mb-1 text-[#111713]">{p.name}</h3>
+                  <h3 className="text-lg font-extrabold leading-tight mb-1 text-[#111713]">
+                    {p.name}
+                  </h3>
                   <p className="text-sm font-medium text-[#648770]">{p.subtitle}</p>
                 </div>
 
+                {/* ✅ Premium, aligned, non-promotional price box */}
                 <div className="rounded-2xl p-4 mb-5 border border-[#e0e8e3] bg-[#f6f8f7]">
-                  <div className="flex justify-between items-center mb-2 text-[11px] font-bold text-[#648770] uppercase">
-                    <span>AL AWEER RATE</span>
-                    <span className="line-through">{formatAED(p.marketAvg)}</span>
+                  <div className="grid grid-cols-2 gap-3">
+                    {/* Market */}
+                    <div className="min-w-0">
+                      <div className="text-[11px] font-bold uppercase tracking-wide text-[#6B7C72]">
+                        {rateLabel}
+                      </div>
+                      <div className="mt-1 text-[15px] font-extrabold text-[#111713] tabular-nums">
+                        {formatAED(p.marketAvg)}
+                      </div>
+                    </div>
+
+                    {/* MyVegMarket */}
+                    <div className="min-w-0 text-right">
+                      <div className="text-[11px] font-bold uppercase tracking-wide text-[#6B7C72]">
+                        MyVegMarket
+                      </div>
+                      <div className="mt-1 text-[15px] font-extrabold text-[#0B5D1E] tabular-nums">
+                        {formatAED(p.myPrice)}
+                      </div>
+                    </div>
                   </div>
 
-                  <div className="flex justify-between items-end">
-                    <span className="text-sm font-bold text-[#1db954]">MyVegMarket Price</span>
-                    <span className="text-2xl font-black text-[#1db954]">{formatAED(p.myPrice)}</span>
+                  <div className="my-3 h-px bg-[#e0e8e3]" />
+
+                  {/* Small, neutral note (optional but premium) */}
+                  <div className="flex items-center justify-between text-[12px] font-semibold text-[#648770]">
+                    <span>Unit</span>
+                    <span className="text-[#111713]/80">{p.unit}</span>
                   </div>
                 </div>
 
