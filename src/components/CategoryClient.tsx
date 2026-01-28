@@ -87,14 +87,18 @@ export default function CategoryClient({ category }: { category: string }) {
     let list = [...baseList];
 
     if (search.trim()) {
-      const s = search.toLowerCase();
-      list = list.filter(
-        (p) =>
-          p.name.toLowerCase().includes(s) ||
-          p.subtitle.toLowerCase().includes(s) ||
-          p.origin.toLowerCase().includes(s)
-      );
-    }
+  const s = search.toLowerCase();
+  list = list.filter((p) => {
+    const subtitle = (p.packaging ?? p.subtitle ?? p.unit ?? "").toLowerCase();
+
+    return (
+      p.name.toLowerCase().includes(s) ||
+      subtitle.includes(s) ||
+      p.origin.toLowerCase().includes(s)
+    );
+  });
+}
+
 
     if (showOriginFilter && origin !== "All") list = list.filter((p) => p.origin === origin);
     if (showTypeFilter && type !== "All") list = list.filter((p) => p.type === type);
@@ -303,7 +307,11 @@ export default function CategoryClient({ category }: { category: string }) {
                   <h3 className="text-lg font-extrabold leading-tight mb-1 text-[#111713]">
                     {p.name}
                   </h3>
-                  <p className="text-sm font-medium text-[#648770]">{p.subtitle}</p>
+                 <p className="text-sm font-semibold text-[#648770]">
+  {p.packaging ?? p.subtitle ?? p.unit ?? ""}
+</p>
+
+
                 </div>
 
                 {/* ✅ Premium, aligned, non-promotional price box */}
