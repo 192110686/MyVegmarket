@@ -147,7 +147,7 @@ export default function Home() {
       {/* RIGHT: Content */}
       <div className="lg:col-span-8">
         <p className="text-[#648770] text-xl font-medium leading-relaxed max-w-3xl">
-         MyVegMarket supports UAE groceries, restaurants, and wholesalers with clear market visibility — and helps exporters 
+         MyVegmarket supports UAE groceries, restaurants, and wholesalers with clear market visibility — and helps exporters 
          plan smarter shipments with real wholesale signals from Dubai markets.Track category-wise movement, 
          compare rates, and make confident buying or export decisions backed by daily pricing intelligence.
         </p>
