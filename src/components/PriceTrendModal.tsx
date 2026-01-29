@@ -1,20 +1,12 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import {
-  ResponsiveContainer,
-  BarChart,
-  Bar,
-  XAxis,
-  YAxis,
-  Tooltip,
-  CartesianGrid,
-} from "recharts";
+import ProductTrendTVChart, { type TVPoint } from "./ProductTrendTVChart";
 
-type RangeKey = "week" | "month" | "year";
+type RangeKey = "1D" | "10D" | "1W" | "1M" | "3M" | "6M" | "1Y" | "MAX";
 
 type TrendPoint = {
-  label: string;
+  time: string; // ✅ real date "YYYY-MM-DD" (important for horizontal scroll)
   marketAvg: number;
   myPrice: number;
 };
@@ -30,21 +22,14 @@ export default function PriceTrendModal({
   productId: string;
   productName?: string;
 }) {
-  const [range, setRange] = useState<RangeKey>("week");
+  const [range, setRange] = useState<RangeKey>("1M");
   const [loading, setLoading] = useState(false);
   const [data, setData] = useState<TrendPoint[]>([]);
 
   const title = useMemo(() => {
     const base = productName ? productName + " - " : "";
-    return (
-      base +
-      (range === "week"
-        ? "Weekly Trend"
-        : range === "month"
-        ? "Monthly Trend"
-        : "Yearly Trend")
-    );
-  }, [range, productName]);
+    return base + "Price Trend";
+  }, [productName]);
 
   useEffect(() => {
     if (!open) return;
@@ -67,13 +52,26 @@ export default function PriceTrendModal({
   useEffect(() => {
     if (!open) return;
     setLoading(true);
-    setTimeout(() => {
-      setData(getMockData(range));
+
+    // ✅ For now: always load BIG dummy dataset (so user can scroll months/years)
+    // Later replace with API call: productId + range (but still return long history for scrolling)
+    const t = setTimeout(() => {
+      const history = makeDummyHistory({
+        start: "2025-01-01",
+        days: 900, // ~2.5 years
+        seed: hashSeed(productId || "default"),
+      });
+      setData(history);
       setLoading(false);
-    }, 200);
-  }, [open, range, productId]);
+    }, 120);
+
+    return () => clearTimeout(t);
+  }, [open, productId]); // ✅ do NOT regenerate on range (range only changes viewport)
 
   if (!open) return null;
+
+  const myvegSeries = toTVSeries(data, "myPrice");
+  const marketSeries = toTVSeries(data, "marketAvg");
 
   return (
     <div className="fixed inset-0 z-[999] flex items-center justify-center p-4">
@@ -84,7 +82,7 @@ export default function PriceTrendModal({
           <div>
             <h2 className="text-lg font-black text-[#111713]">{title}</h2>
             <p className="text-sm text-[#648770] font-medium">
-              Market Average vs MyVegMarket Price
+              MyVegMarket vs Market price trend
             </p>
           </div>
 
@@ -98,51 +96,44 @@ export default function PriceTrendModal({
           </button>
         </div>
 
-        <div className="px-6 pt-4 flex gap-2">
-          {[
-            { key: "week", label: "Weekly" },
-            { key: "month", label: "Monthly" },
-            { key: "year", label: "Yearly" },
-          ].map((t) => (
-            <button
-              key={t.key}
-              onClick={() => setRange(t.key as RangeKey)}
-              className={[
-                "px-4 py-2 rounded-full text-sm font-black border transition",
-                range === t.key
-                  ? "bg-[#1db954] text-white border-[#1db954]"
-                  : "bg-white text-[#111713] border-[#e0e8e3] hover:bg-[#f6f8f7]",
-              ].join(" ")}
-            >
-              {t.label}
-            </button>
-          ))}
+        {/* Time ranges like Google Finance */}
+        <div className="px-6 pt-4 flex flex-wrap gap-2">
+          {(["1D", "10D", "1W", "1M", "3M", "6M", "1Y", "MAX"] as RangeKey[]).map(
+            (k) => (
+              <button
+                key={k}
+                onClick={() => setRange(k)}
+                className={[
+                  "px-4 py-2 rounded-full text-sm font-black border transition",
+                  range === k
+                    ? "bg-[#1db954] text-white border-[#1db954]"
+                    : "bg-white text-[#111713] border-[#e0e8e3] hover:bg-[#f6f8f7]",
+                ].join(" ")}
+              >
+                {k}
+              </button>
+            )
+          )}
         </div>
 
         <div className="px-6 pt-4 pb-6">
-          <div className="h-[430px] rounded-2xl bg-[#f6f8f7] border border-[#e0e8e3]">
+          <div className="rounded-2xl bg-[#f6f8f7] border border-[#e0e8e3] p-3 overflow-hidden">
             {loading ? (
-              <div className="h-full grid place-items-center text-[#648770] font-medium">
+              <div className="h-[430px] grid place-items-center text-[#648770] font-medium">
                 Loading chart...
               </div>
             ) : data.length === 0 ? (
-              <div className="h-full grid place-items-center text-[#648770] font-medium">
+              <div className="h-[430px] grid place-items-center text-[#648770] font-medium">
                 No trend data available.
               </div>
             ) : (
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart
-                  data={data}
-                  margin={{ top: 18, right: 20, left: 0, bottom: 18 }}
-                >
-                  <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis dataKey="label" />
-                  <YAxis />
-                  <Tooltip />
-                  <Bar dataKey="marketAvg" />
-                  <Bar dataKey="myPrice" />
-                </BarChart>
-              </ResponsiveContainer>
+              <ProductTrendTVChart
+                title={title}
+                range={range} // ✅ IMPORTANT: chart uses this to set visible window
+                myveg={myvegSeries}
+                market={marketSeries}
+                height={430}
+              />
             )}
           </div>
         </div>
@@ -151,32 +142,67 @@ export default function PriceTrendModal({
   );
 }
 
-function getMockData(range: RangeKey): TrendPoint[] {
-  if (range === "week") {
-    return [
-      { label: "Mon", marketAvg: 9.2, myPrice: 6.7 },
-      { label: "Tue", marketAvg: 9.0, myPrice: 6.8 },
-      { label: "Wed", marketAvg: 9.4, myPrice: 6.75 },
-      { label: "Thu", marketAvg: 9.1, myPrice: 6.7 },
-      { label: "Fri", marketAvg: 9.6, myPrice: 6.9 },
-      { label: "Sat", marketAvg: 9.8, myPrice: 7.0 },
-      { label: "Sun", marketAvg: 9.3, myPrice: 6.85 },
-    ];
+function toTVSeries(data: TrendPoint[], key: "marketAvg" | "myPrice"): TVPoint[] {
+  return data.map((d) => ({ time: d.time, value: d[key] }));
+}
+
+/** ---------------- DUMMY HISTORY GENERATOR ---------------- **/
+
+function makeDummyHistory(opts: { start: string; days: number; seed: number }): TrendPoint[] {
+  const { start, days } = opts;
+
+  // seeded pseudo-random (stable per productId)
+  let s = opts.seed || 1234567;
+  const rnd = () => {
+    s ^= s << 13;
+    s ^= s >> 17;
+    s ^= s << 5;
+    return (s >>> 0) / 4294967296;
+  };
+
+  let t = start;
+
+  let my = 6.8 + rnd() * 0.6;  // start point varies per product
+  let mk = 9.5 + rnd() * 0.8;
+
+  const out: TrendPoint[] = [];
+  for (let i = 0; i < days; i++) {
+    // season wave + random drift
+    const season = Math.sin(i / 18) * 0.18 + Math.sin(i / 70) * 0.10;
+    my += (rnd() - 0.5) * 0.08 + season * 0.22;
+    mk += (rnd() - 0.5) * 0.10 + season * 0.30;
+
+    // keep reasonable
+    my = Math.max(4.5, Math.min(12.0, my));
+    mk = Math.max(6.0, Math.min(18.0, mk));
+
+    out.push({
+      time: t,
+      myPrice: +my.toFixed(2),
+      marketAvg: +mk.toFixed(2),
+    });
+
+    t = addDaysLocal(t, 1);
   }
-  if (range === "month") {
-    return [
-      { label: "W1", marketAvg: 9.1, myPrice: 6.6 },
-      { label: "W2", marketAvg: 9.5, myPrice: 6.8 },
-      { label: "W3", marketAvg: 9.7, myPrice: 6.95 },
-      { label: "W4", marketAvg: 9.2, myPrice: 6.7 },
-    ];
+
+  return out;
+}
+
+function addDaysLocal(dateStr: string, days: number) {
+  const [y, m, d] = dateStr.split("-").map(Number);
+  const dt = new Date(y, m - 1, d);
+  dt.setDate(dt.getDate() + days);
+  const yyyy = dt.getFullYear();
+  const mm = String(dt.getMonth() + 1).padStart(2, "0");
+  const dd = String(dt.getDate()).padStart(2, "0");
+  return `${yyyy}-${mm}-${dd}`;
+}
+
+function hashSeed(str: string) {
+  let h = 2166136261;
+  for (let i = 0; i < str.length; i++) {
+    h ^= str.charCodeAt(i);
+    h = Math.imul(h, 16777619);
   }
-  return [
-    { label: "Jan", marketAvg: 10.2, myPrice: 7.4 },
-    { label: "Feb", marketAvg: 10.0, myPrice: 7.2 },
-    { label: "Mar", marketAvg: 9.6, myPrice: 7.0 },
-    { label: "Apr", marketAvg: 9.2, myPrice: 6.8 },
-    { label: "May", marketAvg: 9.0, myPrice: 6.7 },
-    { label: "Jun", marketAvg: 9.4, myPrice: 6.9 },
-  ];
+  return h >>> 0;
 }
