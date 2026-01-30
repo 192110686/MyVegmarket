@@ -176,8 +176,6 @@ export default function Home() {
   </div>
 </section>
 
-
-
         {/* CTA SUBSCRIBE */}
         <section className="px-6 lg:px-20 py-24">
           <div className="max-w-[1440px] mx-auto bg-[#0B5D1E] rounded-[3rem] p-16 relative overflow-hidden">

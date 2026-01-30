@@ -149,7 +149,7 @@ export default function Navbar() {
         {/* Buttons */}
         <div className="flex items-center gap-3">
           <Link
-            href="/get-started"
+            href="/containers-listing"
             className="h-11 px-6 rounded-full bg-[#1db954] text-white font-bold flex items-center justify-center hover:opacity-90"
           >
             Containers Listing
