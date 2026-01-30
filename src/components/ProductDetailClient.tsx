@@ -25,13 +25,6 @@ export default function ProductDetailClient({ id }: { id: string }) {
   const myPrice = product?.myPrice ?? 12.25;
   const marketAvg = product?.marketAvg ?? 15.5;
 
-  const thumbs = [
-    product?.image,
-    "https://images.unsplash.com/photo-1546470427-e26264be0b95?auto=format&fit=crop&w=800&q=80",
-    "https://images.unsplash.com/photo-1524594152303-9fd13543fe6e?auto=format&fit=crop&w=800&q=80",
-    "https://images.unsplash.com/photo-1518977956812-cd3dbadaaf31?auto=format&fit=crop&w=800&q=80",
-  ].map((x) => safeImg(x || ""));
-
   return (
     <main className="bg-[#f6f8f7] min-h-screen px-6 lg:px-20 pt-10 pb-24">
       <div className="max-w-[1300px] mx-auto">
@@ -54,53 +47,28 @@ export default function ProductDetailClient({ id }: { id: string }) {
 
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
           {/* Left */}
-          <div className="lg:col-span-4 space-y-4">
+          <div className="lg:col-span-4 space-y-3">
             <div className="relative rounded-[28px] overflow-hidden border border-[#e0e8e3] shadow-sm bg-white">
               <div className="absolute top-4 left-4 z-10 bg-[#1db954] text-white px-4 py-1.5 rounded-full text-xs font-black uppercase tracking-wider">
                 Top Quality
               </div>
 
-              <div className="aspect-square w-full bg-[#f0f4f2]">
-                <img
-                  src={safeImg(product?.image || thumbs[0])}
-                  alt={title}
-                  className="w-full h-full object-cover"
-                  onError={(e) => {
-                    (e.currentTarget as HTMLImageElement).src =
-                      "https://images.unsplash.com/photo-1542838132-92c53300491e?auto=format&fit=crop&w=1600&q=80";
-                  }}
-                />
-              </div>
+              <div className="aspect-square w-full bg-[#f0f4f2] flex items-center justify-center p-6">
+  <img
+    src={safeImg(product?.image || "")}
+    alt={title}
+    className="w-full h-full object-contain"
+    onError={(e) => {
+      (e.currentTarget as HTMLImageElement).src =
+        "https://images.unsplash.com/photo-1542838132-92c53300491e?auto=format&fit=crop&w=1600&q=80";
+    }}
+  />
+</div>
+
             </div>
 
-            {/* Thumbs */}
-            <div className="flex gap-3">
-              {thumbs.slice(0, 4).map((t, idx) => (
-                <button
-                  key={idx}
-                  className={`w-[76px] h-[76px] rounded-2xl overflow-hidden border bg-white shadow-sm ${
-                    idx === 0
-                      ? "border-[#1db954] ring-2 ring-[#1db954]/15"
-                      : "border-[#e0e8e3]"
-                  }`}
-                >
-                  <img
-                    src={t}
-                    alt="thumb"
-                    className="w-full h-full object-cover"
-                    onError={(e) => {
-                      (e.currentTarget as HTMLImageElement).src =
-                        "https://images.unsplash.com/photo-1542838132-92c53300491e?auto=format&fit=crop&w=800&q=80";
-                    }}
-                  />
-                </button>
-              ))}
-            </div>
-          </div>
-
-          {/* Right */}
-          <div className="lg:col-span-8">
-            <div className="flex items-center gap-3 mb-3">
+            {/* ✅ moved here (replacing thumbs) */}
+            <div className="bg-white border border-[#e0e8e3] rounded-2xl p-4 shadow-sm flex items-center justify-between">
               <span className="px-3 py-1 rounded-full bg-[#1db954]/10 text-[#1db954] text-[11px] font-black uppercase tracking-tight">
                 Verified Supplier
               </span>
@@ -108,6 +76,11 @@ export default function ProductDetailClient({ id }: { id: string }) {
                 SKU: MV-{id}
               </span>
             </div>
+          </div>
+
+          {/* Right */}
+          <div className="lg:col-span-8 lg:-mt-2">
+            {/* ✅ removed Verified Supplier + SKU from here */}
 
             <h1 className="text-[52px] leading-[1.05] font-black text-[#111713]">
               {title}

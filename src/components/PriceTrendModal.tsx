@@ -1,12 +1,12 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import ProductTrendTVChart, { type TVPoint } from "./ProductTrendTVChart";
 
 type RangeKey = "1D" | "10D" | "1W" | "1M" | "3M" | "6M" | "1Y" | "MAX";
 
 type TrendPoint = {
-  time: string; // ✅ real date "YYYY-MM-DD" (important for horizontal scroll)
+  time: string;
   marketAvg: number;
   myPrice: number;
 };
@@ -25,6 +25,9 @@ export default function PriceTrendModal({
   const [range, setRange] = useState<RangeKey>("1M");
   const [loading, setLoading] = useState(false);
   const [data, setData] = useState<TrendPoint[]>([]);
+
+  // ✅ avg pill text will be updated directly (NO state)
+  const avgRef = useRef<HTMLDivElement | null>(null);
 
   const title = useMemo(() => {
     const base = productName ? productName + " - " : "";
@@ -53,20 +56,21 @@ export default function PriceTrendModal({
     if (!open) return;
     setLoading(true);
 
-    // ✅ For now: always load BIG dummy dataset (so user can scroll months/years)
-    // Later replace with API call: productId + range (but still return long history for scrolling)
     const t = setTimeout(() => {
       const history = makeDummyHistory({
         start: "2025-01-01",
-        days: 900, // ~2.5 years
+        days: 900,
         seed: hashSeed(productId || "default"),
       });
       setData(history);
       setLoading(false);
+
+      // reset avg text quickly
+      if (avgRef.current) avgRef.current.textContent = "Avg: -";
     }, 120);
 
     return () => clearTimeout(t);
-  }, [open, productId]); // ✅ do NOT regenerate on range (range only changes viewport)
+  }, [open, productId]);
 
   if (!open) return null;
 
@@ -96,24 +100,34 @@ export default function PriceTrendModal({
           </button>
         </div>
 
-        {/* Time ranges like Google Finance */}
-        <div className="px-6 pt-4 flex flex-wrap gap-2">
-          {(["1D", "10D", "1W", "1M", "3M", "6M", "1Y", "MAX"] as RangeKey[]).map(
-            (k) => (
-              <button
-                key={k}
-                onClick={() => setRange(k)}
-                className={[
-                  "px-4 py-2 rounded-full text-sm font-black border transition",
-                  range === k
-                    ? "bg-[#1db954] text-white border-[#1db954]"
-                    : "bg-white text-[#111713] border-[#e0e8e3] hover:bg-[#f6f8f7]",
-                ].join(" ")}
-              >
-                {k}
-              </button>
-            )
-          )}
+        {/* ✅ Time ranges row + AVG at top-right beside MAX */}
+        <div className="px-6 pt-4 flex items-center justify-between gap-3">
+          <div className="flex flex-wrap gap-2">
+            {(["1D", "10D", "1W", "1M", "3M", "6M", "1Y", "MAX"] as RangeKey[]).map(
+              (k) => (
+                <button
+                  key={k}
+                  onClick={() => setRange(k)}
+                  className={[
+                    "px-4 py-2 rounded-full text-sm font-black border transition",
+                    range === k
+                      ? "bg-[#1db954] text-white border-[#1db954]"
+                      : "bg-white text-[#111713] border-[#e0e8e3] hover:bg-[#f6f8f7]",
+                  ].join(" ")}
+                >
+                  {k}
+                </button>
+              )
+            )}
+          </div>
+
+          {/* ✅ Avg pill */}
+          <div
+            ref={avgRef}
+            className="shrink-0 px-4 py-2 rounded-full text-sm font-black border border-[#e0e8e3] bg-white text-[#111713]"
+          >
+            Avg: -
+          </div>
         </div>
 
         <div className="px-6 pt-4 pb-6">
@@ -129,10 +143,15 @@ export default function PriceTrendModal({
             ) : (
               <ProductTrendTVChart
                 title={title}
-                range={range} // ✅ IMPORTANT: chart uses this to set visible window
+                range={range}
                 myveg={myvegSeries}
                 market={marketSeries}
                 height={430}
+                onAvgTextChange={(text) => {
+                  if (!avgRef.current) return;
+                  // ✅ NO state update here (no rerender)
+                  avgRef.current.textContent = text || "Avg: -";
+                }}
               />
             )}
           </div>
@@ -151,7 +170,6 @@ function toTVSeries(data: TrendPoint[], key: "marketAvg" | "myPrice"): TVPoint[]
 function makeDummyHistory(opts: { start: string; days: number; seed: number }): TrendPoint[] {
   const { start, days } = opts;
 
-  // seeded pseudo-random (stable per productId)
   let s = opts.seed || 1234567;
   const rnd = () => {
     s ^= s << 13;
@@ -162,17 +180,15 @@ function makeDummyHistory(opts: { start: string; days: number; seed: number }): 
 
   let t = start;
 
-  let my = 6.8 + rnd() * 0.6;  // start point varies per product
+  let my = 6.8 + rnd() * 0.6;
   let mk = 9.5 + rnd() * 0.8;
 
   const out: TrendPoint[] = [];
   for (let i = 0; i < days; i++) {
-    // season wave + random drift
-    const season = Math.sin(i / 18) * 0.18 + Math.sin(i / 70) * 0.10;
+    const season = Math.sin(i / 18) * 0.18 + Math.sin(i / 70) * 0.1;
     my += (rnd() - 0.5) * 0.08 + season * 0.22;
-    mk += (rnd() - 0.5) * 0.10 + season * 0.30;
+    mk += (rnd() - 0.5) * 0.1 + season * 0.3;
 
-    // keep reasonable
     my = Math.max(4.5, Math.min(12.0, my));
     mk = Math.max(6.0, Math.min(18.0, mk));
 

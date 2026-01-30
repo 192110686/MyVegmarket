@@ -20,7 +20,10 @@ type Props = {
   myveg: TVPoint[];
   market?: TVPoint[];
   height?: number;
-  range: RangeKey; // ✅ IMPORTANT
+  range: RangeKey;
+
+  // ✅ modal will render the avg pill; we just “stream” text to it
+  onAvgTextChange?: (text: string) => void;
 };
 
 function clamp(n: number, min: number, max: number) {
@@ -74,20 +77,50 @@ function rangeToDays(r: RangeKey) {
   }
 }
 
-// ---------- AVG helpers (visible window) ----------
+/** ✅ Fast precompute so avg calc is O(log n) instead of looping whole array every pixel */
+function buildIndex(series: TVPoint[]) {
+  const t: number[] = [];
+  const ps: number[] = [0];
+  for (let i = 0; i < series.length; i++) {
+    const ms = new Date(series[i].time).getTime();
+    t.push(ms);
+    ps.push(ps[i] + series[i].value);
+  }
+  return { t, ps }; // times + prefixSum
+}
+
+function lowerBound(arr: number[], x: number) {
+  let lo = 0,
+    hi = arr.length;
+  while (lo < hi) {
+    const mid = (lo + hi) >> 1;
+    if (arr[mid] < x) lo = mid + 1;
+    else hi = mid;
+  }
+  return lo;
+}
+
+function upperBound(arr: number[], x: number) {
+  let lo = 0,
+    hi = arr.length;
+  while (lo < hi) {
+    const mid = (lo + hi) >> 1;
+    if (arr[mid] <= x) lo = mid + 1;
+    else hi = mid;
+  }
+  return lo;
+}
+
 function timeToMs(t: any): number | null {
   if (!t) return null;
 
-  // string "YYYY-MM-DD"
   if (typeof t === "string") {
     const ms = new Date(t).getTime();
     return Number.isFinite(ms) ? ms : null;
   }
 
-  // utc timestamp seconds
   if (typeof t === "number") return t * 1000;
 
-  // BusinessDay
   if (typeof t === "object" && "year" in t && "month" in t && "day" in t) {
     const ms = Date.UTC(t.year, t.month - 1, t.day);
     return Number.isFinite(ms) ? ms : null;
@@ -96,29 +129,22 @@ function timeToMs(t: any): number | null {
   return null;
 }
 
-function avgForVisibleRange(series: TVPoint[], from: any, to: any): number | null {
+function avgInRange(index: { t: number[]; ps: number[] }, from: any, to: any): number | null {
   const fromMs = timeToMs(from);
   const toMs = timeToMs(to);
   if (fromMs == null || toMs == null) return null;
 
-  const lo = Math.min(fromMs, toMs);
-  const hi = Math.max(fromMs, toMs);
+  const loMs = Math.min(fromMs, toMs);
+  const hiMs = Math.max(fromMs, toMs);
 
-  let sum = 0;
-  let count = 0;
+  const l = lowerBound(index.t, loMs);
+  const r = upperBound(index.t, hiMs);
+  const count = r - l;
+  if (!count) return null;
 
-  for (const p of series) {
-    const ms = timeToMs(p.time);
-    if (ms == null) continue;
-    if (ms >= lo && ms <= hi) {
-      sum += p.value;
-      count++;
-    }
-  }
-
-  return count ? sum / count : null;
+  const sum = index.ps[r] - index.ps[l];
+  return sum / count;
 }
-// -----------------------------------------------
 
 export default function ProductTrendTVChart({
   title,
@@ -126,6 +152,7 @@ export default function ProductTrendTVChart({
   market,
   height = 430,
   range,
+  onAvgTextChange,
 }: Props) {
   const wrapperRef = useRef<HTMLDivElement | null>(null);
   const containerRef = useRef<HTMLDivElement | null>(null);
@@ -134,42 +161,60 @@ export default function ProductTrendTVChart({
   const myRef = useRef<ISeriesApi<"Line"> | null>(null);
   const marketRef = useRef<ISeriesApi<"Line"> | null>(null);
 
-  // Hover labels
   const topLabelRef = useRef<HTMLDivElement | null>(null);
   const bottomTimeRef = useRef<HTMLDivElement | null>(null);
 
   const [view, setView] = useState<ViewMode>("COMPARE");
   const [mode, setMode] = useState<"ABS" | "PCT">("ABS");
 
-  // ✅ AVG state (visible window)
-  const [avgMy, setAvgMy] = useState<number | null>(null);
-  const [avgMk, setAvgMk] = useState<number | null>(null);
-
-  // Use ABS series for average (user asked avg price)
+  // Use ABS series for average
   const myAbs = useMemo(() => myveg ?? [], [myveg]);
   const mkAbs = useMemo(() => market ?? [], [market]);
 
-  const mySeries = useMemo(
-    () => (mode === "PCT" ? toPct(myAbs) : myAbs),
-    [mode, myAbs]
-  );
-  const mkSeries = useMemo(
-    () => (mode === "PCT" ? toPct(mkAbs) : mkAbs),
-    [mode, mkAbs]
-  );
+  // % series for rendering
+  const mySeries = useMemo(() => (mode === "PCT" ? toPct(myAbs) : myAbs), [mode, myAbs]);
+  const mkSeries = useMemo(() => (mode === "PCT" ? toPct(mkAbs) : mkAbs), [mode, mkAbs]);
 
-  const recomputeAvgFromChart = () => {
+  // ✅ Precomputed indexes for FAST avg
+  const myIdx = useMemo(() => buildIndex(myAbs), [myAbs]);
+  const mkIdx = useMemo(() => buildIndex(mkAbs), [mkAbs]);
+
+  // ✅ Avoid React rerender on scroll: update avg text via ref + RAF throttle
+  const lastAvgTextRef = useRef<string>("");
+  const rafRef = useRef<number | null>(null);
+
+  const pushAvgText = () => {
     const chart = chartRef.current;
     if (!chart) return;
 
     const vr = chart.timeScale().getVisibleRange();
     if (!vr) return;
 
-    const my = view !== "MARKET" ? avgForVisibleRange(myAbs, vr.from, vr.to) : null;
-    const mk = view !== "MY" ? avgForVisibleRange(mkAbs, vr.from, vr.to) : null;
+    const prefix = mode === "PCT" ? "Avg (Price):" : "Avg:";
 
-    setAvgMy(my);
-    setAvgMk(mk);
+    const parts: string[] = [];
+    if (view !== "MARKET") {
+      const a = avgInRange(myIdx, vr.from, vr.to);
+      parts.push(`MyVeg ${prefix} ${a == null ? "-" : `AED ${a.toFixed(2)}`}`);
+    }
+    if (view !== "MY") {
+      const a = avgInRange(mkIdx, vr.from, vr.to);
+      parts.push(`Market ${prefix} ${a == null ? "-" : `AED ${a.toFixed(2)}`}`);
+    }
+
+    const text = parts.join("  •  ");
+    if (text !== lastAvgTextRef.current) {
+      lastAvgTextRef.current = text;
+      onAvgTextChange?.(text);
+    }
+  };
+
+  const scheduleAvg = () => {
+    if (rafRef.current != null) return;
+    rafRef.current = requestAnimationFrame(() => {
+      rafRef.current = null;
+      pushAvgText();
+    });
   };
 
   // Create chart once
@@ -186,41 +231,23 @@ export default function ProductTrendTVChart({
       layout: {
         background: { color: "transparent" },
         textColor: "rgba(17,23,19,0.60)",
-
-        // ✅ REMOVE TradingView / TV logo watermark
-        // (new versions show it by default for attribution)
-        attributionLogo: false,
+        attributionLogo: false, // ✅ removes TV logo
       },
-
-      // optional extra safety
-
-
 
       grid: {
         vertLines: { color: "rgba(0,0,0,0.06)" },
         horzLines: { color: "rgba(0,0,0,0.06)" },
       },
       rightPriceScale: { borderColor: "rgba(0,0,0,0.10)", ticksVisible: true },
-      timeScale: {
-        borderColor: "rgba(0,0,0,0.10)",
-        timeVisible: true,
-        secondsVisible: false,
-      },
+      timeScale: { borderColor: "rgba(0,0,0,0.10)", timeVisible: true, secondsVisible: false },
 
-      // ✅ Only vertical dashed crosshair
       crosshair: {
         mode: CrosshairMode.Normal,
-        vertLine: {
-          visible: true,
-          labelVisible: false,
-          width: 1,
-          style: 2,
-          color: "rgba(0,0,0,0.35)",
-        },
+        vertLine: { visible: true, labelVisible: false, width: 1, style: 2, color: "rgba(0,0,0,0.35)" },
         horzLine: { visible: false, labelVisible: false },
       },
 
-      // ✅ horizontal pan (already what you want)
+      // ✅ keep horizontal pan ON
       handleScroll: {
         pressedMouseMove: true,
         mouseWheel: true,
@@ -228,17 +255,11 @@ export default function ProductTrendTVChart({
         vertTouchDrag: false,
       },
 
-      // ✅ keep zoom off (simple)
-      handleScale: {
-        axisPressedMouseMove: false,
-        mouseWheel: false,
-        pinch: false,
-      },
+      handleScale: { axisPressedMouseMove: false, mouseWheel: false, pinch: false },
     });
 
     chartRef.current = chart;
 
-    // MyVeg series (green)
     myRef.current = chart.addSeries(LineSeries, {
       lineWidth: 2,
       color: "rgba(29,185,84,0.95)",
@@ -248,7 +269,6 @@ export default function ProductTrendTVChart({
       crosshairMarkerRadius: 4,
     });
 
-    // Resize
     const onResize = () => {
       if (!chartRef.current || !containerRef.current) return;
       try {
@@ -258,13 +278,10 @@ export default function ProductTrendTVChart({
     };
     window.addEventListener("resize", onResize);
 
-    // ✅ AVG updates when visible range changes (drag/scroll)
-    const onVisibleRangeChange = () => {
-      recomputeAvgFromChart();
-    };
+    // ✅ avg updates on range change while scrolling (throttled)
+    const onVisibleRangeChange = () => scheduleAvg();
     chart.timeScale().subscribeVisibleTimeRangeChange(onVisibleRangeChange);
 
-    // Hover labels (top + bottom date pill)
     chart.subscribeCrosshairMove((param) => {
       const top = topLabelRef.current;
       const bottom = bottomTimeRef.current;
@@ -291,11 +308,7 @@ export default function ProductTrendTVChart({
 
       const wrapRect = wrap.getBoundingClientRect();
       const pillWidth = 140;
-      const left = clamp(
-        param.point.x - pillWidth / 2,
-        8,
-        wrapRect.width - pillWidth - 8
-      );
+      const left = clamp(param.point.x - pillWidth / 2, 8, wrapRect.width - pillWidth - 8);
 
       bottom.textContent = String(param.time);
       bottom.style.transform = `translateX(${left}px)`;
@@ -313,11 +326,13 @@ export default function ProductTrendTVChart({
       chartRef.current = null;
       myRef.current = null;
       marketRef.current = null;
+      if (rafRef.current != null) cancelAnimationFrame(rafRef.current);
+      rafRef.current = null;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [height]);
 
-  // Set/Update data (IMPORTANT: no fitContent here)
+  // Update series data (NO fitContent here)
   useEffect(() => {
     const chart = chartRef.current;
     const myS = myRef.current;
@@ -351,13 +366,12 @@ export default function ProductTrendTVChart({
       }
     }
 
-    // ✅ recompute avg after data/view change
-    // (range change will set visible range below, which triggers again)
-    recomputeAvgFromChart();
+    // ✅ update avg once (no rerender spam)
+    scheduleAvg();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [mySeries, mkSeries, view]);
 
-  // ✅ On range change: set initial visible window, then user can pan freely
+  // On range change: set initial visible window, allow free pan
   useEffect(() => {
     const chart = chartRef.current;
     if (!chart || !mySeries.length) return;
@@ -366,7 +380,7 @@ export default function ProductTrendTVChart({
       try {
         chart.timeScale().fitContent();
       } catch {}
-      // avg will update via visible range subscription
+      scheduleAvg();
       return;
     }
 
@@ -384,42 +398,24 @@ export default function ProductTrendTVChart({
         chart.timeScale().fitContent();
       } catch {}
     }
+
+    scheduleAvg();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [range, mySeries]);
 
-  const avgLine = useMemo(() => {
-    const parts: string[] = [];
-
-    // show avg price always (even if user is in % mode, label it clearly)
-    const prefix = mode === "PCT" ? "Avg (Price):" : "Avg:";
-
-    if (view !== "MARKET") {
-      parts.push(
-        `MyVeg ${prefix} ${avgMy == null ? "-" : `AED ${avgMy.toFixed(2)}`}`
-      );
-    }
-    if (view !== "MY") {
-      parts.push(
-        `Market ${prefix} ${avgMk == null ? "-" : `AED ${avgMk.toFixed(2)}`}`
-      );
-    }
-
-    return parts.join("  •  ");
-  }, [avgMy, avgMk, view, mode]);
+  // ✅ when mode/view changes, avg text label should refresh
+  useEffect(() => {
+    scheduleAvg();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [mode, view]);
 
   return (
     <div className="h-full w-full flex flex-col">
-      {/* Controls */}
       <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between mb-3">
         <div>
           <div className="text-[#111713] font-black">{title}</div>
           <div className="text-sm text-[#648770] font-medium">
             Drag / scroll left-right to see previous/next dates
-          </div>
-
-          {/* ✅ AVG top display */}
-          <div className="mt-1 text-xs font-black text-[#111713]/70">
-            {avgLine}
           </div>
         </div>
 
@@ -452,7 +448,6 @@ export default function ProductTrendTVChart({
         </div>
       </div>
 
-      {/* Chart wrapper + labels */}
       <div ref={wrapperRef} className="relative w-full select-none">
         <div
           ref={topLabelRef}
