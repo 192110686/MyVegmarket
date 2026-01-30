@@ -1,7 +1,7 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { supabase } from "@/lib/supabaseClient";
+import { useState } from "react";
+import { getSupabase } from "@/lib/supabaseClient";
 
 type Status = "pending" | "approved" | "rejected";
 type PaymentStatus = "unpaid" | "paid";
@@ -36,12 +36,30 @@ export default function ContainersListingPage() {
   const [country, setCountry] = useState("UAE");
   const [city, setCity] = useState("");
 
+  // ✅ Always get supabase inside component (client side) + guard
+  function requireSupabase() {
+    const supabase = getSupabase();
+    if (!supabase) {
+      alert(
+        "Supabase env missing. Add NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY (Vercel + .env.local)."
+      );
+      return null;
+    }
+    return supabase;
+  }
+
   async function fetchProfileByEmail(email: string) {
+    const supabase = requireSupabase();
+    if (!supabase) return;
+
+    if (!email.trim()) return alert("Please enter your email.");
+
     setLoading(true);
+
     const { data, error } = await supabase
       .from("exporter_applications")
       .select("*")
-      .eq("email", email)
+      .eq("email", email.trim().toLowerCase())
       .order("created_at", { ascending: false })
       .limit(1)
       .maybeSingle();
@@ -52,10 +70,14 @@ export default function ContainersListingPage() {
       alert(error.message);
       return;
     }
+
     setProfile((data as any) ?? null);
   }
 
   async function submitApplication() {
+    const supabase = requireSupabase();
+    if (!supabase) return;
+
     if (!emailLookup.trim()) return alert("Please enter your email.");
     if (!fullName.trim()) return alert("Enter full name");
     if (!companyName.trim()) return alert("Enter company name");
@@ -66,22 +88,21 @@ export default function ContainersListingPage() {
 
     setLoading(true);
 
-   const payload = {
-  full_name: fullName,
-  contact_person: fullName,
-  company_name: companyName,
-  email: emailLookup.trim(),
-  phone,
-  trade_license_no: tradeLicenseNo,
-  country,
-  city,
-  // ✅ DON’T SEND status/payment_status from frontend
-   };
-
+    const payload = {
+      full_name: fullName.trim(),
+      contact_person: fullName.trim(),
+      company_name: companyName.trim(),
+      email: emailLookup.trim().toLowerCase(),
+      phone: phone.trim(),
+      trade_license_no: tradeLicenseNo.trim(),
+      country: country.trim(),
+      city: city.trim(),
+      // ✅ DON’T SEND status/payment_status from frontend (DB defaults handle it)
+    };
 
     const { data, error } = await supabase
       .from("exporter_applications")
-      .insert([payload])
+      .insert(payload) // ✅ no need [payload]
       .select("*")
       .single();
 
@@ -102,7 +123,9 @@ export default function ContainersListingPage() {
   return (
     <main className="bg-[#f6f8f7] min-h-screen px-6 lg:px-20 pt-10 pb-24">
       <div className="max-w-[1100px] mx-auto">
-        <h1 className="text-4xl font-black text-[#111713]">Containers Listing</h1>
+        <h1 className="text-4xl font-black text-[#111713]">
+          Containers Listing
+        </h1>
         <p className="text-[#648770] font-medium mt-2">
           Exporter verification is required before listing containers.
         </p>
@@ -111,7 +134,9 @@ export default function ContainersListingPage() {
         <div className="mt-6 bg-white border border-[#e0e8e3] rounded-[26px] p-6">
           <div className="flex flex-col md:flex-row gap-3 md:items-center md:justify-between">
             <div className="flex-1">
-              <div className="text-sm font-black text-[#111713]">Enter your email</div>
+              <div className="text-sm font-black text-[#111713]">
+                Enter your email
+              </div>
               <input
                 value={emailLookup}
                 onChange={(e) => setEmailLookup(e.target.value)}
@@ -121,7 +146,7 @@ export default function ContainersListingPage() {
             </div>
 
             <button
-              onClick={() => fetchProfileByEmail(emailLookup.trim())}
+              onClick={() => fetchProfileByEmail(emailLookup)}
               disabled={loading || !emailLookup.trim()}
               className="h-[48px] px-6 rounded-full bg-[#111713] text-white font-black disabled:opacity-50"
             >
@@ -154,8 +179,8 @@ export default function ContainersListingPage() {
 
               {isLocked ? (
                 <div className="mt-4 text-sm font-medium text-[#648770]">
-                  🔒 Containers listing is locked until you are <b>approved</b> and
-                  <b> paid</b>.
+                  🔒 Containers listing is locked until you are <b>approved</b>{" "}
+                  and <b>paid</b>.
                 </div>
               ) : (
                 <div className="mt-4 text-sm font-medium text-[#1db954]">
@@ -178,9 +203,17 @@ export default function ContainersListingPage() {
 
             <div className="mt-5 grid grid-cols-1 md:grid-cols-2 gap-4">
               <Input label="Full Name" value={fullName} onChange={setFullName} />
-              <Input label="Company Name" value={companyName} onChange={setCompanyName} />
+              <Input
+                label="Company Name"
+                value={companyName}
+                onChange={setCompanyName}
+              />
               <Input label="Phone" value={phone} onChange={setPhone} />
-              <Input label="Trade License No" value={tradeLicenseNo} onChange={setTradeLicenseNo} />
+              <Input
+                label="Trade License No"
+                value={tradeLicenseNo}
+                onChange={setTradeLicenseNo}
+              />
               <Input label="Country" value={country} onChange={setCountry} />
               <Input label="City" value={city} onChange={setCity} />
             </div>
