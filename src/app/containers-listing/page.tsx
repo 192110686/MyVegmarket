@@ -76,7 +76,7 @@ export default function ContainersListingPage() {
   country,
   city,
   // ✅ DON’T SEND status/payment_status from frontend
-};
+   };
 
 
     const { data, error } = await supabase
