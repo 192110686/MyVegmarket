@@ -3,7 +3,6 @@
 import { useState } from "react";
 import { getSupabase } from "@/lib/supabaseClient";
 
-type Status = "pending" | "approved" | "rejected";
 type PaymentStatus = "unpaid" | "paid";
 
 type ExporterRow = {
@@ -16,7 +15,13 @@ type ExporterRow = {
   trade_license_no: string;
   country: string;
   city: string;
-  status: Status;
+
+  // ✅ real status logic
+  approved: boolean;
+
+  // keep status optional (old rows / old schema won’t crash)
+  status?: "pending" | "approved" | "rejected";
+
   payment_status: PaymentStatus;
 };
 
@@ -25,7 +30,6 @@ export default function ContainersListingPage() {
 
   // simple "local login" for now using email (later we’ll replace with real auth)
   const [emailLookup, setEmailLookup] = useState("");
-
   const [profile, setProfile] = useState<ExporterRow | null>(null);
 
   // Form fields
@@ -97,12 +101,12 @@ export default function ContainersListingPage() {
       trade_license_no: tradeLicenseNo.trim(),
       country: country.trim(),
       city: city.trim(),
-      // ✅ DON’T SEND status/payment_status from frontend (DB defaults handle it)
+      // ✅ DON’T SEND approved/payment_status from frontend (DB defaults handle it)
     };
 
     const { data, error } = await supabase
       .from("exporter_applications")
-      .insert(payload) // ✅ no need [payload]
+      .insert(payload)
       .select("*")
       .single();
 
@@ -116,16 +120,16 @@ export default function ContainersListingPage() {
     setProfile(data as any);
   }
 
-  // UI helpers
+  // ✅ Derived UI status (no enum headaches)
+  const displayStatus = profile?.approved ? "approved" : "pending";
+
   const isLocked =
-    !profile || profile.status !== "approved" || profile.payment_status !== "paid";
+    !profile || profile.approved !== true || profile.payment_status !== "paid";
 
   return (
     <main className="bg-[#f6f8f7] min-h-screen px-6 lg:px-20 pt-10 pb-24">
       <div className="max-w-[1100px] mx-auto">
-        <h1 className="text-4xl font-black text-[#111713]">
-          Containers Listing
-        </h1>
+        <h1 className="text-4xl font-black text-[#111713]">Containers Listing</h1>
         <p className="text-[#648770] font-medium mt-2">
           Exporter verification is required before listing containers.
         </p>
@@ -134,9 +138,7 @@ export default function ContainersListingPage() {
         <div className="mt-6 bg-white border border-[#e0e8e3] rounded-[26px] p-6">
           <div className="flex flex-col md:flex-row gap-3 md:items-center md:justify-between">
             <div className="flex-1">
-              <div className="text-sm font-black text-[#111713]">
-                Enter your email
-              </div>
+              <div className="text-sm font-black text-[#111713]">Enter your email</div>
               <input
                 value={emailLookup}
                 onChange={(e) => setEmailLookup(e.target.value)}
@@ -169,8 +171,9 @@ export default function ContainersListingPage() {
 
                 <div className="flex gap-2 flex-wrap">
                   <span className="px-3 py-2 rounded-full text-xs font-black border bg-white">
-                    Status: {profile.status}
+                    Status: {displayStatus}
                   </span>
+
                   <span className="px-3 py-2 rounded-full text-xs font-black border bg-white">
                     Payment: {profile.payment_status}
                   </span>
@@ -179,8 +182,7 @@ export default function ContainersListingPage() {
 
               {isLocked ? (
                 <div className="mt-4 text-sm font-medium text-[#648770]">
-                  🔒 Containers listing is locked until you are <b>approved</b>{" "}
-                  and <b>paid</b>.
+                  🔒 Containers listing is locked until you are <b>approved</b> and <b>paid</b>.
                 </div>
               ) : (
                 <div className="mt-4 text-sm font-medium text-[#1db954]">
@@ -194,20 +196,14 @@ export default function ContainersListingPage() {
         {/* Step 2: application form (only if no profile) */}
         {!profile && (
           <div className="mt-8 bg-white border border-[#e0e8e3] rounded-[26px] p-6">
-            <h2 className="text-xl font-black text-[#111713]">
-              Verification Form
-            </h2>
+            <h2 className="text-xl font-black text-[#111713]">Verification Form</h2>
             <p className="text-sm text-[#648770] font-medium mt-1">
               Fill details once. After submit, it cannot be edited.
             </p>
 
             <div className="mt-5 grid grid-cols-1 md:grid-cols-2 gap-4">
               <Input label="Full Name" value={fullName} onChange={setFullName} />
-              <Input
-                label="Company Name"
-                value={companyName}
-                onChange={setCompanyName}
-              />
+              <Input label="Company Name" value={companyName} onChange={setCompanyName} />
               <Input label="Phone" value={phone} onChange={setPhone} />
               <Input
                 label="Trade License No"
@@ -231,11 +227,9 @@ export default function ContainersListingPage() {
         {/* Step 3: Payment Gate + Container Listing (placeholder for now) */}
         {profile && (
           <div className="mt-8 bg-white border border-[#e0e8e3] rounded-[26px] p-6">
-            <h2 className="text-xl font-black text-[#111713]">
-              Subscription & Listing
-            </h2>
+            <h2 className="text-xl font-black text-[#111713]">Subscription & Listing</h2>
 
-            {profile.status !== "approved" ? (
+            {profile.approved !== true ? (
               <p className="mt-2 text-[#648770] font-medium">
                 Your account is under review. We will approve manually.
               </p>
