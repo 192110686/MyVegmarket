@@ -24,6 +24,26 @@ function formatAED(n: number) {
 function labelCat(c: ProductCategory) {
   return c.charAt(0).toUpperCase() + c.slice(1);
 }
+function isIOS() {
+  if (typeof window === "undefined") return false;
+  return /iPad|iPhone|iPod/.test(navigator.userAgent) ||
+    (navigator.platform === "MacIntel" && (navigator as any).maxTouchPoints > 1);
+}
+
+function savePdfSmart(doc: any, filename: string) {
+  // iPhone/iOS: doc.save won't download, so open PDF in new tab
+  if (isIOS()) {
+    const blob = doc.output("blob");
+    const url = URL.createObjectURL(blob);
+    window.open(url, "_blank");
+    setTimeout(() => URL.revokeObjectURL(url), 60000);
+    return;
+  }
+
+  // Normal browsers (Android/PC)
+  doc.save(filename);
+}
+
 
 export default function AlAweerPricesPage() {
   const [search, setSearch] = useState("");
@@ -181,7 +201,7 @@ export default function AlAweerPricesPage() {
         },
       });
 
-      doc.save(`myvegmarket-al-aweer-price-report.pdf`);
+      savePdfSmart(doc, `myvegmarket-al-aweer-price-report.pdf`);
     } catch (err) {
       console.error(err);
       alert("PDF generation failed. Check console for details.");
