@@ -38,8 +38,9 @@ export default function Navbar() {
     router.push("/products/vegetables");
   };
 
-  // close suggestion dropdown when clicking outside
   const searchWrapRef = useRef<HTMLDivElement | null>(null);
+
+  // ✅ close suggestion dropdown when clicking outside
   useEffect(() => {
     const onDown = (e: MouseEvent) => {
       if (!searchWrapRef.current) return;
@@ -47,28 +48,33 @@ export default function Navbar() {
     };
     document.addEventListener("mousedown", onDown);
     return () => document.removeEventListener("mousedown", onDown);
-  }, []);
+  }, []); // ✅ constant deps
 
-  // close mobile menu on resize to desktop
+  // ✅ close mobile menu on resize to desktop
   useEffect(() => {
     const onResize = () => {
       if (window.innerWidth >= 1024) setMobileMenu(false);
     };
     window.addEventListener("resize", onResize);
     return () => window.removeEventListener("resize", onResize);
-  }, []);
+  }, []); // ✅ constant deps
 
-  // ✅ Premium: prevent body scroll when mobile menu is open
+  // ✅ ESC closes menu (premium behavior)
   useEffect(() => {
-    if (mobileMenu) {
-      document.body.style.overflow = "hidden";
-    } else {
-      document.body.style.overflow = "";
-    }
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setMobileMenu(false);
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, []); // ✅ constant deps
+
+  // ✅ prevent body scroll ONLY when menu is open
+  useEffect(() => {
+    document.body.style.overflow = mobileMenu ? "hidden" : "";
     return () => {
       document.body.style.overflow = "";
     };
-  }, [mobileMenu]);
+  }, [mobileMenu]); // ✅ constant deps length (always 1)
 
   const SearchBox = ({ hideDropdown = false }: { hideDropdown?: boolean }) => (
     <div ref={searchWrapRef} className="relative w-full min-w-0">
@@ -97,14 +103,8 @@ export default function Navbar() {
         type="text"
       />
 
-      {/* Suggestions */}
       {!hideDropdown && open && query.length >= 2 && (
-        <div
-          className="
-            absolute top-[54px] left-0 right-0
-            bg-white border border-[#e8efe9] rounded-2xl shadow-xl overflow-hidden z-50
-          "
-        >
+        <div className="absolute top-[54px] left-0 right-0 bg-white border border-[#e8efe9] rounded-2xl shadow-xl overflow-hidden z-50">
           {suggestions.length === 0 ? (
             <div className="px-4 py-3 text-sm text-[#648770]">
               No matches. Try: <b>fruit</b>, <b>vegetables</b>, <b>eggs</b>, <b>apple</b>…
@@ -123,14 +123,8 @@ export default function Navbar() {
                   }}
                 >
                   <div className="h-10 w-10 rounded-xl overflow-hidden bg-[#f1f5f3] flex-shrink-0">
-                    <img
-                      src={p.image}
-                      alt={p.name}
-                      className="h-full w-full object-cover"
-                      loading="lazy"
-                    />
+                    <img src={p.image} alt={p.name} className="h-full w-full object-cover" loading="lazy" />
                   </div>
-
                   <div className="min-w-0">
                     <div className="font-semibold text-[#111713] truncate">{p.name}</div>
                     <div className="text-xs text-[#648770] truncate">
@@ -162,7 +156,7 @@ export default function Navbar() {
     <header className="fixed top-0 left-0 right-0 z-50 bg-white/95 backdrop-blur border-b border-[#e8efe9]">
       <div className="max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-12">
         {/* Row 1 */}
-        <div className="h-[76px] flex items-center justify-between gap-3">
+        <div className="h-[76px] flex items-center gap-3">
           {/* Logo */}
           <Link
             href="/"
@@ -181,9 +175,9 @@ export default function Navbar() {
             </div>
           </div>
 
-          {/* Actions */}
-          <div className="flex items-center gap-2 shrink-0">
-            {/* Desktop links */}
+          {/* Right side (always pinned right) */}
+          <div className="ml-auto flex items-center gap-2 shrink-0">
+            {/* Desktop links (includes Containers now as NORMAL link) */}
             <nav className="hidden lg:flex items-center gap-8 font-semibold text-[#111713]">
               <Link href="/al-aweer-prices" className="hover:text-[#1db954]">
                 Al Aweer Prices
@@ -194,31 +188,26 @@ export default function Navbar() {
               <Link href="/services" className="hover:text-[#1db954]">
                 Services
               </Link>
+              <Link href="/containers-listing" className="hover:text-[#1db954]">
+                Containers Listing
+              </Link>
             </nav>
 
-            {/* Containers */}
+            {/* Login (desktop + tablet) */}
             <Link
-              href="/containers-listing"
-              className="h-11 px-4 sm:px-6 rounded-full bg-[#1db954] text-white font-bold flex items-center justify-center hover:opacity-90 whitespace-nowrap"
-            >
-              <span className="hidden sm:inline">Containers Listing</span>
-              <span className="sm:hidden">Containers</span>
-            </Link>
+  href="/login"
+  className="hidden lg:flex h-11 px-5 rounded-full bg-[#f0f4f2] text-[#111713] font-bold items-center justify-center hover:bg-[#e6efe9] whitespace-nowrap"
+>
+  Login
+</Link>
 
-            {/* Login for >=sm */}
-            <Link
-              href="/login"
-              className="hidden sm:flex h-11 px-5 rounded-full bg-[#f0f4f2] text-[#111713] font-bold items-center justify-center hover:bg-[#e6efe9]"
-            >
-              Login
-            </Link>
 
-            {/* Menu (mobile+tablet) */}
+            {/* ✅ Hamburger: small SQUARE box top-right (works for iphone + android) */}
             <button
               type="button"
               aria-label="Open menu"
               onClick={() => setMobileMenu((v) => !v)}
-              className="lg:hidden h-11 w-11 rounded-full border border-[#e8efe9] bg-white grid place-items-center"
+              className="lg:hidden h-11 w-11 rounded-xl border border-[#e8efe9] bg-white grid place-items-center shadow-sm hover:shadow-md transition flex-shrink-0"
             >
               <span className="material-symbols-outlined text-[#111713]">
                 {mobileMenu ? "close" : "menu"}
@@ -233,16 +222,15 @@ export default function Navbar() {
         </div>
       </div>
 
-      {/* ✅ Mobile menu overlay (premium, no layout shift) */}
+      {/* ✅ Mobile/Tablet Menu: small dropdown box at TOP-RIGHT */}
       {mobileMenu && (
         <div className="lg:hidden fixed inset-0 z-[60]">
-          <div
-            className="absolute inset-0 bg-black/30"
-            onClick={() => setMobileMenu(false)}
-          />
+          {/* click outside closes */}
+          <div className="absolute inset-0 bg-black/20" onClick={() => setMobileMenu(false)} />
 
-          <div className="absolute top-[76px] left-0 right-0 px-4 sm:px-6">
-            <div className="bg-white rounded-2xl shadow-xl border border-[#e8efe9] overflow-hidden">
+          {/* dropdown panel */}
+          <div className="fixed top-[86px] right-4 sm:right-6">
+            <div className="w-[min(92vw,320px)] bg-white rounded-2xl shadow-xl border border-[#e8efe9] overflow-hidden">
               <button
                 type="button"
                 className="w-full text-left px-5 py-4 font-semibold hover:bg-[#f1f5f3]"
@@ -253,6 +241,7 @@ export default function Navbar() {
               >
                 Al Aweer Prices
               </button>
+
               <button
                 type="button"
                 className="w-full text-left px-5 py-4 font-semibold hover:bg-[#f1f5f3]"
@@ -263,6 +252,7 @@ export default function Navbar() {
               >
                 Get Started
               </button>
+
               <button
                 type="button"
                 className="w-full text-left px-5 py-4 font-semibold hover:bg-[#f1f5f3]"
@@ -274,10 +264,22 @@ export default function Navbar() {
                 Services
               </button>
 
-              {/* Login for xs (since top login is hidden on xs) */}
+              {/* ✅ Containers moved INSIDE hamburger menu (as you asked) */}
               <button
                 type="button"
-                className="sm:hidden w-full text-left px-5 py-4 font-bold text-[#0B5D1E] hover:bg-[#f1f5f3]"
+                className="w-full text-left px-5 py-4 font-semibold hover:bg-[#f1f5f3]"
+                onClick={() => {
+                  setMobileMenu(false);
+                  router.push("/containers-listing");
+                }}
+              >
+                Containers Listing
+              </button>
+
+              {/* Login visible on mobile too */}
+              <button
+                type="button"
+                className="w-full text-left px-5 py-4 font-bold text-[#0B5D1E] hover:bg-[#f1f5f3]"
                 onClick={() => {
                   setMobileMenu(false);
                   router.push("/login");
