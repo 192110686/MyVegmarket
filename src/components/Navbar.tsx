@@ -230,7 +230,7 @@ export default function Navbar() {
 
           {/* dropdown panel */}
           <div className="fixed top-[86px] right-4 sm:right-6">
-            <div className="w-[min(92vw,320px)] bg-white rounded-2xl shadow-xl border border-[#e8efe9] overflow-hidden">
+            <div className="w-[min(92vw,320px)] bg-white text-[#111713] rounded-2xl shadow-xl border border-[#e8efe9] overflow-hidden">
               <button
                 type="button"
                 className="w-full text-left px-5 py-4 font-semibold hover:bg-[#f1f5f3]"
