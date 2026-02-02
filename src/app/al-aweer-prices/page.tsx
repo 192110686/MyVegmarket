@@ -4,6 +4,9 @@ import Link from "next/link";
 import { useMemo, useState, useRef, useEffect } from "react";
 import { PRODUCTS, Product, ProductCategory } from "@/lib/products";
 
+import jsPDF from "jspdf";
+import autoTable from "jspdf-autotable";
+
 const ALL_CATEGORIES: ProductCategory[] = [
   "vegetables",
   "fruits",
@@ -20,6 +23,46 @@ function formatAED(n: number) {
 
 function labelCat(c: ProductCategory) {
   return c.charAt(0).toUpperCase() + c.slice(1);
+}
+
+/** ✅ iOS detection (iPhone/iPad + iPadOS in desktop mode) */
+function isIOS() {
+  if (typeof window === "undefined") return false;
+  return (
+    /iPad|iPhone|iPod/.test(navigator.userAgent) ||
+    (navigator.platform === "MacIntel" && (navigator as any).maxTouchPoints > 1)
+  );
+}
+
+/**
+ * ✅ Safari rule: window.open must happen immediately inside click event
+ * so we open a blank tab first, then later navigate it to the PDF blob URL.
+ */
+function openBlankTabIOS() {
+  if (!isIOS()) return null;
+  return window.open("", "_blank");
+}
+
+function savePdfSmart(doc: any, filename: string, iosTab: Window | null) {
+  // iPhone/iOS: doc.save won't download reliably
+  if (isIOS()) {
+    const blob = doc.output("blob");
+    const url = URL.createObjectURL(blob);
+
+    if (iosTab) {
+      iosTab.location.href = url;
+    } else {
+      // fallback if tab blocked
+      window.location.href = url;
+    }
+
+    // revoke later (don't revoke immediately on iOS)
+    setTimeout(() => URL.revokeObjectURL(url), 5 * 60 * 1000);
+    return;
+  }
+
+  // Normal browsers (Android/PC)
+  doc.save(filename);
 }
 
 export default function AlAweerPricesPage() {
@@ -75,14 +118,10 @@ export default function AlAweerPricesPage() {
     }
 
     // origin
-    if (showOriginFilter && origin !== "All") {
-      list = list.filter((p) => p.origin === origin);
-    }
+    if (showOriginFilter && origin !== "All") list = list.filter((p) => p.origin === origin);
 
     // type
-    if (showTypeFilter && type !== "All") {
-      list = list.filter((p) => p.type === type);
-    }
+    if (showTypeFilter && type !== "All") list = list.filter((p) => p.type === type);
 
     // sort by marketAvg
     list.sort((a, b) =>
@@ -107,17 +146,88 @@ export default function AlAweerPricesPage() {
   const handleSelectAllCats = () => setSelectedCats([...ALL_CATEGORIES]);
   const handleClearCats = () => setSelectedCats([]);
 
-  // ✅ iOS-safe PDF download (server route with Content-Disposition: attachment)
   const handleDownloadPdf = () => {
-    const qs = new URLSearchParams({
-      search,
-      origin,
-      type,
-      sort,
-      cats: selectedCats.join(","),
-    });
+    const iosTab = openBlankTabIOS(); // ✅ MUST be first line for iPhone Safari
 
-    window.location.href = `/api/al-aweer-report?${qs.toString()}`;
+    try {
+      const doc = new jsPDF({ orientation: "p", unit: "pt", format: "a4" });
+
+      const title = `MyVegMarket - Al Aweer Price Report`;
+      const generated = `Generated: ${new Date().toLocaleString()}`;
+
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(16);
+      doc.text(title, 40, 44);
+
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(10);
+      doc.text(generated, 40, 62);
+
+      const totalMarket = filtered.reduce((sum, p) => sum + (p.marketAvg || 0), 0);
+
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(10);
+      doc.text(
+        `Filters: Categories: ${selectedCatsText} | Origin: ${origin} | Type: ${type} | Sort: ${
+          sort === "low" ? "Market (Low)" : "Market (High)"
+        } | Search: ${search.trim() ? `"${search.trim()}"` : "—"}`,
+        40,
+        82,
+        { maxWidth: 520 }
+      );
+
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(11);
+      doc.text(
+        `Summary: Items ${filtered.length} | Total Market: ${formatAED(totalMarket)}`,
+        40,
+        105
+      );
+
+      const rows = filtered.map((p) => [
+        p.name,
+        p.origin,
+        p.unit,
+        formatAED(p.marketAvg),
+      ]);
+
+      autoTable(doc, {
+        startY: 125,
+        head: [["Product", "Origin", "Unit", "Market Rate"]],
+        body: rows,
+
+        styles: { fontSize: 9, cellPadding: 6 },
+        headStyles: {
+          fillColor: [29, 185, 84],
+          textColor: [255, 255, 255],
+          fontStyle: "bold",
+        },
+
+        // ✅ centered table so it doesn’t stick to extreme right
+        tableWidth: 520,
+        margin: { left: 60 },
+
+        columnStyles: {
+          0: { cellWidth: 240 },                  // Product
+          1: { cellWidth: 110 },                  // Origin
+          2: { cellWidth: 90, halign: "left" },   // Unit
+          3: { cellWidth: 80, halign: "right" },  // Market
+        },
+
+        didParseCell: (data) => {
+          if (data.section === "head" && data.column.index === 3) {
+            data.cell.styles.halign = "right";
+          }
+        },
+      });
+
+      // ✅ iPhone-safe save
+      savePdfSmart(doc, `myvegmarket-al-aweer-price-report.pdf`, iosTab);
+    } catch (err) {
+      try { iosTab?.close(); } catch {}
+      console.error(err);
+      alert("PDF generation failed. Check console for details.");
+    }
   };
 
   return (
@@ -300,7 +410,7 @@ export default function AlAweerPricesPage() {
         </div>
 
         {/* Table view */}
-        {/* ✅ MOBILE */}
+        {/* ✅ MOBILE: premium stacked rows (no horizontal scroll) */}
         <div className="md:hidden space-y-3">
           {filtered.map((p) => (
             <div
@@ -330,7 +440,7 @@ export default function AlAweerPricesPage() {
           ))}
         </div>
 
-        {/* ✅ DESKTOP */}
+        {/* ✅ DESKTOP: table view */}
         <div className="hidden md:block bg-white border border-[#e0e8e3] rounded-2xl overflow-hidden shadow-sm">
           <div className="grid grid-cols-12 gap-0 bg-green-600 text-white text-sm font-semibold">
             <div className="col-span-6 px-5 py-3">Product</div>
