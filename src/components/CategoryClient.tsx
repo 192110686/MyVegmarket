@@ -4,9 +4,6 @@ import Link from "next/link";
 import { useMemo, useState } from "react";
 import { PRODUCTS, Product, ProductCategory } from "@/lib/products";
 
-import jsPDF from "jspdf";
-import autoTable from "jspdf-autotable";
-
 const CATEGORY_META: Record<ProductCategory, { title: string; desc: string }> = {
   vegetables: {
     title: "Vegetables",
@@ -60,26 +57,6 @@ function parseCategory(raw: string): ProductCategory {
     ? (c as ProductCategory)
     : "vegetables";
 }
-function isIOS() {
-  if (typeof window === "undefined") return false;
-  return /iPad|iPhone|iPod/.test(navigator.userAgent) ||
-    (navigator.platform === "MacIntel" && (navigator as any).maxTouchPoints > 1);
-}
-
-function savePdfSmart(doc: any, filename: string) {
-  // iPhone/iOS: doc.save won't download, so open PDF in new tab
-  if (isIOS()) {
-    const blob = doc.output("blob");
-    const url = URL.createObjectURL(blob);
-    window.open(url, "_blank");
-    setTimeout(() => URL.revokeObjectURL(url), 60000);
-    return;
-  }
-
-  // Normal browsers (Android/PC)
-  doc.save(filename);
-}
-
 
 export default function CategoryClient({ category }: { category: string }) {
   const cat = parseCategory(category);
@@ -110,7 +87,6 @@ export default function CategoryClient({ category }: { category: string }) {
       const s = search.toLowerCase();
       list = list.filter((p) => {
         const subtitle = (p.packaging ?? p.subtitle ?? p.unit ?? "").toLowerCase();
-
         return (
           p.name.toLowerCase().includes(s) ||
           subtitle.includes(s) ||
@@ -125,78 +101,57 @@ export default function CategoryClient({ category }: { category: string }) {
     list.sort((a, b) =>
       sort === "low" ? a.myPrice - b.myPrice : b.myPrice - a.myPrice
     );
+
     return list;
   }, [baseList, search, origin, type, sort, showOriginFilter, showTypeFilter]);
 
-  const handleDownloadPdf = () => {
+  // ✅ Universal download handler: works across platforms best-possible
+  const handleDownloadPdf = async () => {
+    const qs = new URLSearchParams({
+      category: cat,
+      search,
+      origin,
+      type,
+      sort,
+    });
+
+    const url = `/api/category-report?${qs.toString()}`;
+    const filename = `myvegmarket-${cat}-price-report.pdf`;
+
     try {
-      const doc = new jsPDF({ orientation: "p", unit: "pt", format: "a4" });
+      // 1) Fetch PDF bytes
+      const res = await fetch(url, { method: "GET" });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
 
-      const title = `MyVegMarket - ${meta.title} Price Report`;
-      const generated = `Generated: ${new Date().toLocaleString()}`;
+      const blob = await res.blob();
 
-      doc.setFont("helvetica", "bold");
-      doc.setFontSize(16);
-      doc.text(title, 40, 44);
+      // 2) Best UX on mobile: Share sheet (Save to Files)
+      const file = new File([blob], filename, { type: "application/pdf" });
 
-      doc.setFont("helvetica", "normal");
-      doc.setFontSize(10);
-      doc.text(generated, 40, 62);
+      // @ts-ignore - canShare typing may not exist in TS lib
+      if (navigator.canShare?.({ files: [file] })) {
+        // @ts-ignore
+        await navigator.share({
+          files: [file],
+          title: "MyVegMarket Price Report",
+          text: `${meta.title} Price Report (PDF)`,
+        });
+        return;
+      }
 
-      const totalMarket = filtered.reduce((sum, p) => sum + (p.marketAvg || 0), 0);
-      const totalMy = filtered.reduce((sum, p) => sum + (p.myPrice || 0), 0);
-      const totalSave = Math.max(0, totalMarket - totalMy);
-      const savePct = totalMarket > 0 ? (totalSave / totalMarket) * 100 : 0;
-
-      doc.setFont("helvetica", "bold");
-      doc.setFontSize(11);
-      doc.text(
-        `Summary: Items ${filtered.length}   |   Total Market: ${formatAED(
-          totalMarket
-        )}   |   Total MyVegMarket: ${formatAED(totalMy)}   |   Savings: ${formatAED(
-          totalSave
-        )} (${savePct.toFixed(1)}%)`,
-        40,
-        78
-      );
-
-      const rows = filtered.map((p) => {
-        const savePctRow =
-          p.marketAvg && p.marketAvg > 0
-            ? (((p.marketAvg - p.myPrice) / p.marketAvg) * 100).toFixed(1)
-            : "0.0";
-
-        return [
-          p.name,
-          p.origin,
-          p.unit,
-          formatAED(p.marketAvg),
-          formatAED(p.myPrice),
-          `${savePctRow}%`,
-        ];
-      });
-
-      autoTable(doc, {
-        startY: 95,
-        head: [["Product", "Origin", "Unit", "Market Rate", "MyVegMarket", "Save"]],
-        body: rows,
-        styles: { fontSize: 9, cellPadding: 6 },
-        headStyles: { fillColor: [29, 185, 84], textColor: [255, 255, 255] },
-        columnStyles: {
-          0: { cellWidth: 180 },
-          1: { cellWidth: 70 },
-          2: { cellWidth: 60 },
-          3: { cellWidth: 90 },
-          4: { cellWidth: 90 },
-          5: { cellWidth: 60 },
-        },
-      });
-
-     savePdfSmart(doc, `myvegmarket-${cat}-price-report.pdf`);
-
+      // 3) Normal download (desktop/Android)
+      const blobUrl = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = blobUrl;
+      a.download = filename;
+      a.rel = "noopener";
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      setTimeout(() => URL.revokeObjectURL(blobUrl), 60_000);
     } catch (err) {
-      console.error(err);
-      alert("PDF generation failed. Check console for details.");
+      // 4) Last fallback: open in a new tab (iOS Chrome/Google app often needs this)
+      window.open(url, "_blank", "noopener,noreferrer");
     }
   };
 
