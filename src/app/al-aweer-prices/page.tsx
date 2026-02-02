@@ -145,90 +145,58 @@ export default function AlAweerPricesPage() {
 
   const handleSelectAllCats = () => setSelectedCats([...ALL_CATEGORIES]);
   const handleClearCats = () => setSelectedCats([]);
+const handleDownloadPdf = async () => {
+  const qs = new URLSearchParams({
+    search,
+    origin,
+    type,
+    sort,
+    cats: selectedCats.join(","),
+  });
 
-  const handleDownloadPdf = () => {
-    const iosTab = openBlankTabIOS(); // ✅ MUST be first line for iPhone Safari
+  const url = `/api/al-aweer-report?${qs.toString()}`;
+  const filename = "myvegmarket-al-aweer-price-report.pdf";
 
-    try {
-      const doc = new jsPDF({ orientation: "p", unit: "pt", format: "a4" });
+  try {
+    // 1) Fetch the PDF bytes
+    const res = await fetch(url, { method: "GET" });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
 
-      const title = `MyVegMarket - Al Aweer Price Report`;
-      const generated = `Generated: ${new Date().toLocaleString()}`;
+    const blob = await res.blob();
 
-      doc.setFont("helvetica", "bold");
-      doc.setFontSize(16);
-      doc.text(title, 40, 44);
+    // 2) Try Web Share (very user-friendly on iOS: Save to Files)
+    // Works on Safari and sometimes other browsers too
+    const file = new File([blob], filename, { type: "application/pdf" });
 
-      doc.setFont("helvetica", "normal");
-      doc.setFontSize(10);
-      doc.text(generated, 40, 62);
-
-      const totalMarket = filtered.reduce((sum, p) => sum + (p.marketAvg || 0), 0);
-
-      doc.setFont("helvetica", "bold");
-      doc.setFontSize(10);
-      doc.text(
-        `Filters: Categories: ${selectedCatsText} | Origin: ${origin} | Type: ${type} | Sort: ${
-          sort === "low" ? "Market (Low)" : "Market (High)"
-        } | Search: ${search.trim() ? `"${search.trim()}"` : "—"}`,
-        40,
-        82,
-        { maxWidth: 520 }
-      );
-
-      doc.setFont("helvetica", "bold");
-      doc.setFontSize(11);
-      doc.text(
-        `Summary: Items ${filtered.length} | Total Market: ${formatAED(totalMarket)}`,
-        40,
-        105
-      );
-
-      const rows = filtered.map((p) => [
-        p.name,
-        p.origin,
-        p.unit,
-        formatAED(p.marketAvg),
-      ]);
-
-      autoTable(doc, {
-        startY: 125,
-        head: [["Product", "Origin", "Unit", "Market Rate"]],
-        body: rows,
-
-        styles: { fontSize: 9, cellPadding: 6 },
-        headStyles: {
-          fillColor: [29, 185, 84],
-          textColor: [255, 255, 255],
-          fontStyle: "bold",
-        },
-
-        // ✅ centered table so it doesn’t stick to extreme right
-        tableWidth: 520,
-        margin: { left: 60 },
-
-        columnStyles: {
-          0: { cellWidth: 240 },                  // Product
-          1: { cellWidth: 110 },                  // Origin
-          2: { cellWidth: 90, halign: "left" },   // Unit
-          3: { cellWidth: 80, halign: "right" },  // Market
-        },
-
-        didParseCell: (data) => {
-          if (data.section === "head" && data.column.index === 3) {
-            data.cell.styles.halign = "right";
-          }
-        },
+    // @ts-ignore (TS sometimes doesn't know canShare)
+    if (navigator.canShare?.({ files: [file] })) {
+      // @ts-ignore
+      await navigator.share({
+        files: [file],
+        title: "MyVegMarket Price Report",
+        text: "Al Aweer Price Report (PDF)",
       });
-
-      // ✅ iPhone-safe save
-      savePdfSmart(doc, `myvegmarket-al-aweer-price-report.pdf`, iosTab);
-    } catch (err) {
-      try { iosTab?.close(); } catch {}
-      console.error(err);
-      alert("PDF generation failed. Check console for details.");
+      return;
     }
-  };
+
+    // 3) Try normal browser download (best for desktop/Android)
+    const blobUrl = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = blobUrl;
+    a.download = filename;
+    a.rel = "noopener";
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(() => URL.revokeObjectURL(blobUrl), 60_000);
+
+    return;
+  } catch (err) {
+    // 4) Last fallback: open the PDF in a new tab (works in iOS Chrome/Google app)
+    window.open(url, "_blank", "noopener,noreferrer");
+  }
+};
+
 
   return (
     <main className="bg-[#f6f8f7] min-h-screen px-6 lg:px-20 pt-10 pb-24">
