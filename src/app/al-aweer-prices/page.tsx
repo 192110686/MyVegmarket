@@ -368,12 +368,7 @@ export default function AlAweerPricesPage() {
   </div>
 </div>
 
-
-      
-         
-       
-
-        {/* Table view */}
+     {/* Table view */}
        {/* ✅ MOBILE: premium stacked rows (no horizontal scroll) */}
 <div className="md:hidden space-y-3">
   {filtered.map((p) => (
