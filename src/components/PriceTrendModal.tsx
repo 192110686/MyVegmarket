@@ -26,7 +26,6 @@ export default function PriceTrendModal({
   const [loading, setLoading] = useState(false);
   const [data, setData] = useState<TrendPoint[]>([]);
 
-  // ✅ avg pill text will be updated directly (NO state)
   const avgRef = useRef<HTMLDivElement | null>(null);
 
   const title = useMemo(() => {
@@ -65,7 +64,6 @@ export default function PriceTrendModal({
       setData(history);
       setLoading(false);
 
-      // reset avg text quickly
       if (avgRef.current) avgRef.current.textContent = "Avg: -";
     }, 120);
 
@@ -77,15 +75,32 @@ export default function PriceTrendModal({
   const myvegSeries = toTVSeries(data, "myPrice");
   const marketSeries = toTVSeries(data, "marketAvg");
 
+  // ✅ responsive chart height
+  const chartHeight = typeof window !== "undefined" && window.innerWidth < 640 ? 320 : 430;
+
   return (
-    <div className="fixed inset-0 z-[999] flex items-center justify-center p-4">
+    <div className="fixed inset-0 z-[999] flex items-center justify-center p-3 sm:p-4">
       <div className="absolute inset-0 bg-black/40" onClick={onClose} />
 
-      <div className="relative w-full max-w-5xl rounded-[26px] bg-white shadow-2xl border border-[#e0e8e3] overflow-hidden">
-        <div className="flex items-center justify-between px-6 py-4 border-b border-[#eef3ef]">
-          <div>
-            <h2 className="text-lg font-black text-[#111713]">{title}</h2>
-            <p className="text-sm text-[#648770] font-medium">
+      {/* ✅ Responsive modal sizing */}
+      <div
+        className="
+          relative w-full
+          max-w-5xl
+          rounded-[22px] sm:rounded-[26px]
+          bg-white shadow-2xl border border-[#e0e8e3]
+          overflow-hidden
+          max-h-[92vh]
+          flex flex-col
+        "
+      >
+        {/* Header */}
+        <div className="flex items-start justify-between gap-4 px-4 sm:px-6 py-4 border-b border-[#eef3ef]">
+          <div className="min-w-0">
+            <h2 className="text-base sm:text-lg font-black text-[#111713] truncate">
+              {title}
+            </h2>
+            <p className="text-xs sm:text-sm text-[#648770] font-medium">
               MyVegMarket vs Market price trend
             </p>
           </div>
@@ -93,23 +108,24 @@ export default function PriceTrendModal({
           <button
             onClick={onClose}
             aria-label="Close"
-            className="h-10 w-10 rounded-full hover:bg-[#f0f4f2] grid place-items-center text-[#111713] font-black"
+            className="h-10 w-10 rounded-full hover:bg-[#f0f4f2] grid place-items-center text-[#111713] font-black shrink-0"
             title="Close"
           >
-            X
+            <span className="material-symbols-outlined">close</span>
           </button>
         </div>
 
-        {/* ✅ Time ranges row + AVG at top-right beside MAX */}
-        <div className="px-6 pt-4 flex items-center justify-between gap-3">
-          <div className="flex flex-wrap gap-2">
+        {/* Controls */}
+        <div className="px-4 sm:px-6 pt-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+          {/* ✅ Mobile: horizontal scroll chips (no wrapping) */}
+          <div className="flex gap-2 overflow-x-auto scrollbar-hide pb-1 -mx-1 px-1">
             {(["1D", "10D", "1W", "1M", "3M", "6M", "1Y", "MAX"] as RangeKey[]).map(
               (k) => (
                 <button
                   key={k}
                   onClick={() => setRange(k)}
                   className={[
-                    "px-4 py-2 rounded-full text-sm font-black border transition",
+                    "shrink-0 px-4 py-2 rounded-full text-sm font-black border transition",
                     range === k
                       ? "bg-[#1db954] text-white border-[#1db954]"
                       : "bg-white text-[#111713] border-[#e0e8e3] hover:bg-[#f6f8f7]",
@@ -121,23 +137,24 @@ export default function PriceTrendModal({
             )}
           </div>
 
-          {/* ✅ Avg pill */}
+          {/* Avg pill */}
           <div
             ref={avgRef}
-            className="shrink-0 px-4 py-2 rounded-full text-sm font-black border border-[#e0e8e3] bg-white text-[#111713]"
+            className="shrink-0 px-4 py-2 rounded-full text-sm font-black border border-[#e0e8e3] bg-white text-[#111713] self-start sm:self-auto"
           >
             Avg: -
           </div>
         </div>
 
-        <div className="px-6 pt-4 pb-6">
-          <div className="rounded-2xl bg-[#f6f8f7] border border-[#e0e8e3] p-3 overflow-hidden">
+        {/* Chart area */}
+        <div className="px-4 sm:px-6 pt-4 pb-5 flex-1 min-h-0">
+          <div className="h-full rounded-2xl bg-[#f6f8f7] border border-[#e0e8e3] p-3 overflow-hidden">
             {loading ? (
-              <div className="h-[430px] grid place-items-center text-[#648770] font-medium">
+              <div className="h-full min-h-[260px] grid place-items-center text-[#648770] font-medium">
                 Loading chart...
               </div>
             ) : data.length === 0 ? (
-              <div className="h-[430px] grid place-items-center text-[#648770] font-medium">
+              <div className="h-full min-h-[260px] grid place-items-center text-[#648770] font-medium">
                 No trend data available.
               </div>
             ) : (
@@ -146,10 +163,9 @@ export default function PriceTrendModal({
                 range={range}
                 myveg={myvegSeries}
                 market={marketSeries}
-                height={430}
+                height={chartHeight}
                 onAvgTextChange={(text) => {
                   if (!avgRef.current) return;
-                  // ✅ NO state update here (no rerender)
                   avgRef.current.textContent = text || "Avg: -";
                 }}
               />

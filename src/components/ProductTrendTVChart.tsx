@@ -21,8 +21,6 @@ type Props = {
   market?: TVPoint[];
   height?: number;
   range: RangeKey;
-
-  // ✅ modal will render the avg pill; we just “stream” text to it
   onAvgTextChange?: (text: string) => void;
 };
 
@@ -86,7 +84,7 @@ function buildIndex(series: TVPoint[]) {
     t.push(ms);
     ps.push(ps[i] + series[i].value);
   }
-  return { t, ps }; // times + prefixSum
+  return { t, ps };
 }
 
 function lowerBound(arr: number[], x: number) {
@@ -167,19 +165,15 @@ export default function ProductTrendTVChart({
   const [view, setView] = useState<ViewMode>("COMPARE");
   const [mode, setMode] = useState<"ABS" | "PCT">("ABS");
 
-  // Use ABS series for average
   const myAbs = useMemo(() => myveg ?? [], [myveg]);
   const mkAbs = useMemo(() => market ?? [], [market]);
 
-  // % series for rendering
   const mySeries = useMemo(() => (mode === "PCT" ? toPct(myAbs) : myAbs), [mode, myAbs]);
   const mkSeries = useMemo(() => (mode === "PCT" ? toPct(mkAbs) : mkAbs), [mode, mkAbs]);
 
-  // ✅ Precomputed indexes for FAST avg
   const myIdx = useMemo(() => buildIndex(myAbs), [myAbs]);
   const mkIdx = useMemo(() => buildIndex(mkAbs), [mkAbs]);
 
-  // ✅ Avoid React rerender on scroll: update avg text via ref + RAF throttle
   const lastAvgTextRef = useRef<string>("");
   const rafRef = useRef<number | null>(null);
 
@@ -231,7 +225,7 @@ export default function ProductTrendTVChart({
       layout: {
         background: { color: "transparent" },
         textColor: "rgba(17,23,19,0.60)",
-        attributionLogo: false, // ✅ removes TV logo
+        attributionLogo: false,
       },
 
       grid: {
@@ -247,7 +241,6 @@ export default function ProductTrendTVChart({
         horzLine: { visible: false, labelVisible: false },
       },
 
-      // ✅ keep horizontal pan ON
       handleScroll: {
         pressedMouseMove: true,
         mouseWheel: true,
@@ -275,10 +268,11 @@ export default function ProductTrendTVChart({
         // @ts-ignore
         chartRef.current.resize(containerRef.current.clientWidth || 900, height);
       } catch {}
+      // keep avg updated after resize
+      scheduleAvg();
     };
     window.addEventListener("resize", onResize);
 
-    // ✅ avg updates on range change while scrolling (throttled)
     const onVisibleRangeChange = () => scheduleAvg();
     chart.timeScale().subscribeVisibleTimeRangeChange(onVisibleRangeChange);
 
@@ -332,7 +326,7 @@ export default function ProductTrendTVChart({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [height]);
 
-  // Update series data (NO fitContent here)
+  // Update series data
   useEffect(() => {
     const chart = chartRef.current;
     const myS = myRef.current;
@@ -366,12 +360,11 @@ export default function ProductTrendTVChart({
       }
     }
 
-    // ✅ update avg once (no rerender spam)
     scheduleAvg();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [mySeries, mkSeries, view]);
 
-  // On range change: set initial visible window, allow free pan
+  // On range change: set initial visible window
   useEffect(() => {
     const chart = chartRef.current;
     if (!chart || !mySeries.length) return;
@@ -403,23 +396,24 @@ export default function ProductTrendTVChart({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [range, mySeries]);
 
-  // ✅ when mode/view changes, avg text label should refresh
   useEffect(() => {
     scheduleAvg();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [mode, view]);
 
   return (
-    <div className="h-full w-full flex flex-col">
-      <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between mb-3">
-        <div>
-          <div className="text-[#111713] font-black">{title}</div>
+    <div className="h-full w-full flex flex-col min-w-0">
+      {/* ✅ Header + controls (premium responsive) */}
+      <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between mb-3 min-w-0">
+        <div className="min-w-0">
+          <div className="text-[#111713] font-black truncate">{title}</div>
           <div className="text-sm text-[#648770] font-medium">
             Drag / scroll left-right to see previous/next dates
           </div>
         </div>
 
-        <div className="flex flex-wrap gap-2">
+        {/* ✅ Mobile: controls become horizontal chip row (no wrap mess) */}
+        <div className="flex gap-2 overflow-x-auto scrollbar-hide pb-1 -mx-1 px-1 md:overflow-visible md:flex-wrap md:pb-0 md:mx-0 md:px-0">
           {[
             { k: "MY", label: "MyVeg" },
             { k: "MARKET", label: "Market" },
@@ -429,7 +423,7 @@ export default function ProductTrendTVChart({
               key={b.k}
               onClick={() => setView(b.k as ViewMode)}
               className={[
-                "px-3 py-2 rounded-full text-sm font-black border transition",
+                "shrink-0 px-3 py-2 rounded-full text-sm font-black border transition",
                 view === b.k
                   ? "bg-[#111713] text-white border-[#111713]"
                   : "bg-white text-[#111713] border-[#e0e8e3] hover:bg-[#f6f8f7]",
@@ -441,19 +435,33 @@ export default function ProductTrendTVChart({
 
           <button
             onClick={() => setMode((m) => (m === "ABS" ? "PCT" : "ABS"))}
-            className="px-3 py-2 rounded-full text-sm font-black border border-[#e0e8e3] bg-white hover:bg-[#f6f8f7]"
+            className="shrink-0 px-3 py-2 rounded-full text-sm font-black border border-[#e0e8e3] bg-white hover:bg-[#f6f8f7]"
           >
             {mode === "ABS" ? "Price" : "% Change"}
           </button>
         </div>
       </div>
 
-      <div ref={wrapperRef} className="relative w-full select-none">
+      {/* ✅ Chart wrapper */}
+      <div
+        ref={wrapperRef}
+        className="relative w-full select-none overflow-hidden rounded-2xl"
+      >
+        {/* ✅ Top hover label (clamped width so it never overflows mobile) */}
         <div
           ref={topLabelRef}
           className="absolute left-3 top-3 z-10 rounded-lg bg-white/95 border border-black/10 px-3 py-2 text-[#111713] shadow-md text-sm font-black"
-          style={{ opacity: 0, pointerEvents: "none" }}
+          style={{
+            opacity: 0,
+            pointerEvents: "none",
+            maxWidth: "calc(100% - 24px)",
+            whiteSpace: "nowrap",
+            overflow: "hidden",
+            textOverflow: "ellipsis",
+          }}
         />
+
+        {/* Bottom time pill */}
         <div
           ref={bottomTimeRef}
           className="absolute bottom-2 z-10 rounded-md bg-[#111713] text-white px-3 py-1 text-xs font-black shadow-md"

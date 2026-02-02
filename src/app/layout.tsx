@@ -37,12 +37,22 @@ export default function RootLayout({
 
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased bg-white text-[#111713] min-h-screen flex flex-col`}
+        style={
+          {
+            // ✅ Default navbar height (desktop)
+            ["--navbar-h" as any]: "76px",
+          } as React.CSSProperties
+        }
       >
         {/* ✅ Global Navbar (fixed) */}
         <Navbar />
 
-        {/* ✅ This padding pushes all pages below fixed Navbar */}
-        <div className="pt-[76px] flex-1">{children}</div>
+        {/* ✅ Push all pages below fixed Navbar (responsive height) */}
+        <main className="flex-1 pt-[var(--navbar-h)]">
+          {/* ✅ On mobile navbar becomes taller because of search row */}
+          <div className="block md:hidden h-[56px]" />
+          {children}
+        </main>
 
         {/* ✅ Global Footer */}
         <Footer />
