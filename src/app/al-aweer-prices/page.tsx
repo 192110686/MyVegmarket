@@ -222,148 +222,156 @@ export default function AlAweerPricesPage() {
         </div>
 
         {/* Filter Bar */}
-        <div className="bg-white rounded-2xl p-4 mb-10 shadow-sm border border-[#e0e8e3]">
-          <div className="flex flex-wrap items-center justify-between gap-4">
-            <div className="flex flex-wrap items-center gap-3">
-              {/* Search */}
-              <div className="relative">
-                <span className="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-[#648770]">
-                  search
-                </span>
-                <input
-                  value={search}
-                  onChange={(e) => setSearch(e.target.value)}
-                  placeholder="Search products..."
-                  className="h-11 w-full rounded-full bg-[#f0f4f2] pl-12 pr-4 text-sm font-medium outline-none focus:ring-2 focus:ring-[#0B5D1E]/20"
-                />
-              </div>
+       {/* Filter Bar */}
+<div className="bg-white text-[#111713] rounded-2xl p-4 mb-10 shadow-sm border border-[#e0e8e3]">
+  <div className="grid grid-cols-1 lg:grid-cols-[1fr_auto] gap-4 items-start">
+    {/* LEFT: filters */}
+    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3 min-w-0">
+      {/* Search */}
+      <div className="relative w-full min-w-0">
+        <span className="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-[#648770]">
+          search
+        </span>
+        <input
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          placeholder="Search products..."
+          className="h-11 w-full min-w-0 rounded-full bg-[#f0f4f2] pl-12 pr-4 text-sm font-semibold text-[#111713] placeholder:text-[#648770] outline-none focus:ring-2 focus:ring-[#0B5D1E]/20"
+        />
+      </div>
 
-              {/* Categories dropdown (inline) */}
-              <div className="relative" ref={catRef}>
-                <button
-                  type="button"
-                  onClick={() => setCatOpen((v) => !v)}
-                  className="h-11 rounded-full bg-[#f0f4f2] px-4 text-sm font-semibold outline-none flex items-center gap-2"
-                >
-                  <span>Category:</span>
-                  <span className="text-[#111713]">
-                    {selectedCats.length === ALL_CATEGORIES.length
-                      ? "All"
-                      : selectedCats.length === 0
-                      ? "None"
-                      : `${selectedCats.length} selected`}
-                  </span>
-                  <span className="material-symbols-outlined text-[18px] text-[#648770]">
-                    expand_more
-                  </span>
-                </button>
+      {/* Categories dropdown */}
+      <div className="relative w-full min-w-0" ref={catRef}>
+        <button
+          type="button"
+          onClick={() => setCatOpen((v) => !v)}
+          className="h-11 w-full min-w-0 rounded-full bg-[#f0f4f2] px-4 text-sm font-semibold outline-none flex items-center justify-between gap-2 text-[#111713] focus:ring-2 focus:ring-[#0B5D1E]/20"
+        >
+          <span className="truncate">
+            Category:{" "}
+            {selectedCats.length === ALL_CATEGORIES.length
+              ? "All"
+              : selectedCats.length === 0
+              ? "None"
+              : `${selectedCats.length} selected`}
+          </span>
+          <span className="material-symbols-outlined text-[18px] text-[#648770] shrink-0">
+            expand_more
+          </span>
+        </button>
 
-                {catOpen && (
-                  <div className="absolute z-20 mt-2 w-[280px] rounded-2xl border border-[#e0e8e3] bg-white shadow-lg p-3">
-                    <div className="flex items-center justify-between mb-2">
-                      <span className="text-sm font-bold text-[#111713]">
-                        Select Categories
-                      </span>
-                      <button
-                        type="button"
-                        onClick={() => setCatOpen(false)}
-                        className="text-[#648770] hover:text-[#111713]"
-                        aria-label="Close"
-                      >
-                        <span className="material-symbols-outlined text-[20px]">
-                          close
-                        </span>
-                      </button>
-                    </div>
-
-                    <div className="flex gap-2 mb-3">
-                      <button
-                        type="button"
-                        onClick={handleSelectAllCats}
-                        className="h-9 px-3 rounded-full border border-[#e0e8e3] bg-white text-sm font-bold hover:bg-[#f6f8f7]"
-                      >
-                        Select All
-                      </button>
-                      <button
-                        type="button"
-                        onClick={handleClearCats}
-                        className="h-9 px-3 rounded-full border border-[#e0e8e3] bg-white text-sm font-bold hover:bg-[#f6f8f7]"
-                      >
-                        Clear
-                      </button>
-                    </div>
-
-                    <div className="space-y-2">
-                      {ALL_CATEGORIES.map((c) => {
-                        const checked = selectedCats.includes(c);
-                        return (
-                          <label
-                            key={c}
-                            className="flex items-center gap-3 text-sm font-semibold text-[#111713] cursor-pointer"
-                          >
-                            <input
-                              type="checkbox"
-                              checked={checked}
-                              onChange={() => handleToggleCategory(c)}
-                              className="h-4 w-4 accent-[#1db954]"
-                            />
-                            {labelCat(c)}
-                          </label>
-                        );
-                      })}
-                    </div>
-
-                    <div className="mt-3 text-[12px] font-semibold text-[#648770]">
-                      Selected: {selectedCatsText}
-                    </div>
-                  </div>
-                )}
-              </div>
-
-              {/* Origin */}
-              {showOriginFilter && (
-                <select
-                  value={origin}
-                  onChange={(e) => setOrigin(e.target.value)}
-                  className="h-11 rounded-full bg-[#f0f4f2] px-4 text-sm font-semibold outline-none"
-                >
-                  {origins.map((o) => (
-                    <option key={o} value={o}>
-                      Origin: {o}
-                    </option>
-                  ))}
-                </select>
-              )}
-
-              {/* Type */}
-              {showTypeFilter && (
-                <select
-                  value={type}
-                  onChange={(e) => setType(e.target.value as any)}
-                  className="h-11 rounded-full bg-[#f0f4f2] px-4 text-sm font-semibold outline-none"
-                >
-                  <option value="All">Type: All</option>
-                  <option value="Organic">Type: Organic</option>
-                  <option value="Regular">Type: Regular</option>
-                </select>
-              )}
-
-              {/* Sort */}
-              <select
-                value={sort}
-                onChange={(e) => setSort(e.target.value as any)}
-                className="h-11 rounded-full bg-[#f0f4f2] px-4 text-sm font-semibold outline-none"
+        {catOpen && (
+          <div className="absolute z-20 mt-2 w-full sm:w-[320px] rounded-2xl border border-[#e0e8e3] bg-white shadow-lg p-3">
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-sm font-bold text-[#111713]">
+                Select Categories
+              </span>
+              <button
+                type="button"
+                onClick={() => setCatOpen(false)}
+                className="text-[#648770] hover:text-[#111713]"
+                aria-label="Close"
               >
-                <option value="low">Sort: Market (Low)</option>
-                <option value="high">Sort: Market (High)</option>
-              </select>
+                <span className="material-symbols-outlined text-[20px]">
+                  close
+                </span>
+              </button>
             </div>
 
-            <div className="text-sm font-medium text-[#648770]">
-              Showing {filtered.length} results
+            <div className="flex gap-2 mb-3">
+              <button
+                type="button"
+                onClick={handleSelectAllCats}
+                className="h-9 px-3 rounded-full border border-[#e0e8e3] bg-white text-sm font-bold hover:bg-[#f6f8f7]"
+              >
+                Select All
+              </button>
+              <button
+                type="button"
+                onClick={handleClearCats}
+                className="h-9 px-3 rounded-full border border-[#e0e8e3] bg-white text-sm font-bold hover:bg-[#f6f8f7]"
+              >
+                Clear
+              </button>
+            </div>
+
+            <div className="space-y-2">
+              {ALL_CATEGORIES.map((c) => {
+                const checked = selectedCats.includes(c);
+                return (
+                  <label
+                    key={c}
+                    className="flex items-center gap-3 text-sm font-semibold text-[#111713] cursor-pointer"
+                  >
+                    <input
+                      type="checkbox"
+                      checked={checked}
+                      onChange={() => handleToggleCategory(c)}
+                      className="h-4 w-4 accent-[#1db954]"
+                    />
+                    {labelCat(c)}
+                  </label>
+                );
+              })}
+            </div>
+
+            <div className="mt-3 text-[12px] font-semibold text-[#648770] break-words">
+              Selected: {selectedCatsText}
             </div>
           </div>
-        </div>
+        )}
+      </div>
+
+      {/* Origin */}
+      {showOriginFilter && (
+        <select
+          value={origin}
+          onChange={(e) => setOrigin(e.target.value)}
+          className="h-11 w-full min-w-0 rounded-full bg-[#f0f4f2] px-4 text-sm font-semibold text-[#111713] outline-none focus:ring-2 focus:ring-[#0B5D1E]/20"
+        >
+          {origins.map((o) => (
+            <option key={o} value={o}>
+              Origin: {o}
+            </option>
+          ))}
+        </select>
+      )}
+
+      {/* Type */}
+      {showTypeFilter && (
+        <select
+          value={type}
+          onChange={(e) => setType(e.target.value as any)}
+          className="h-11 w-full min-w-0 rounded-full bg-[#f0f4f2] px-4 text-sm font-semibold text-[#111713] outline-none focus:ring-2 focus:ring-[#0B5D1E]/20"
+        >
+          <option value="All">Type: All</option>
+          <option value="Organic">Type: Organic</option>
+          <option value="Regular">Type: Regular</option>
+        </select>
+      )}
+
+      {/* Sort */}
+      <select
+        value={sort}
+        onChange={(e) => setSort(e.target.value as any)}
+        className="h-11 w-full min-w-0 rounded-full bg-[#f0f4f2] px-4 text-sm font-semibold text-[#111713] outline-none focus:ring-2 focus:ring-[#0B5D1E]/20"
+      >
+        <option value="low">Sort: Market (Low)</option>
+        <option value="high">Sort: Market (High)</option>
+      </select>
+    </div>
+
+    {/* RIGHT: count */}
+    <div className="text-sm font-medium text-[#648770] lg:text-right">
+      Showing {filtered.length} results
+    </div>
+  </div>
+</div>
+
+
+      
+         
+       
 
         {/* Table view */}
        {/* ✅ MOBILE: premium stacked rows (no horizontal scroll) */}
