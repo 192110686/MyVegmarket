@@ -135,7 +135,7 @@ export default function Navbar() {
 
         {/* Links */}
         <nav className="hidden lg:flex items-center gap-10 font-semibold text-[#111713]">
-          <Link href="/products/vegetables" className="hover:text-[#1db954]">
+          <Link href="/al-aweer-prices" className="hover:text-[#1db954]">
             Al Aweer Prices
           </Link>
           <Link href="/bulk-supply" className="hover:text-[#1db954]">
