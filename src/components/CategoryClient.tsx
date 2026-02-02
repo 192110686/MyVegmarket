@@ -87,18 +87,17 @@ export default function CategoryClient({ category }: { category: string }) {
     let list = [...baseList];
 
     if (search.trim()) {
-  const s = search.toLowerCase();
-  list = list.filter((p) => {
-    const subtitle = (p.packaging ?? p.subtitle ?? p.unit ?? "").toLowerCase();
+      const s = search.toLowerCase();
+      list = list.filter((p) => {
+        const subtitle = (p.packaging ?? p.subtitle ?? p.unit ?? "").toLowerCase();
 
-    return (
-      p.name.toLowerCase().includes(s) ||
-      subtitle.includes(s) ||
-      p.origin.toLowerCase().includes(s)
-    );
-  });
-}
-
+        return (
+          p.name.toLowerCase().includes(s) ||
+          subtitle.includes(s) ||
+          p.origin.toLowerCase().includes(s)
+        );
+      });
+    }
 
     if (showOriginFilter && origin !== "All") list = list.filter((p) => p.origin === origin);
     if (showTypeFilter && type !== "All") list = list.filter((p) => p.type === type);
@@ -217,11 +216,11 @@ export default function CategoryClient({ category }: { category: string }) {
         </div>
 
         {/* Filter Bar */}
-        <div className="bg-white rounded-2xl p-4 mb-10 shadow-sm border border-[#e0e8e3]">
-          <div className="flex flex-wrap items-center justify-between gap-4">
-            <div className="flex flex-wrap items-center gap-3">
+        <div className="bg-white text-[#111713] rounded-2xl p-4 mb-10 shadow-sm border border-[#e0e8e3]">
+          <div className="grid grid-cols-1 lg:grid-cols-[1fr_auto] gap-4 items-start">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 min-w-0">
               {/* Search */}
-              <div className="relative">
+              <div className="relative w-full min-w-0">
                 <span className="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-[#648770]">
                   search
                 </span>
@@ -229,7 +228,7 @@ export default function CategoryClient({ category }: { category: string }) {
                   value={search}
                   onChange={(e) => setSearch(e.target.value)}
                   placeholder={`Search ${meta.title.toLowerCase()}...`}
-                  className="h-11 w-80 rounded-full bg-[#f0f4f2] pl-12 pr-4 text-sm font-medium outline-none focus:ring-2 focus:ring-[#0B5D1E]/20"
+                  className="h-11 w-full min-w-0 rounded-full bg-[#f0f4f2] pl-12 pr-4 text-sm font-semibold text-[#111713] placeholder:text-[#648770] outline-none focus:ring-2 focus:ring-[#0B5D1E]/20"
                 />
               </div>
 
@@ -238,7 +237,7 @@ export default function CategoryClient({ category }: { category: string }) {
                 <select
                   value={origin}
                   onChange={(e) => setOrigin(e.target.value)}
-                  className="h-11 rounded-full bg-[#f0f4f2] px-4 text-sm font-semibold outline-none"
+                  className="h-11 w-full min-w-0 rounded-full bg-[#f0f4f2] px-4 text-sm font-semibold text-[#111713] outline-none focus:ring-2 focus:ring-[#0B5D1E]/20"
                 >
                   {origins.map((o) => (
                     <option key={o} value={o}>
@@ -253,7 +252,7 @@ export default function CategoryClient({ category }: { category: string }) {
                 <select
                   value={type}
                   onChange={(e) => setType(e.target.value as any)}
-                  className="h-11 rounded-full bg-[#f0f4f2] px-4 text-sm font-semibold outline-none"
+                  className="h-11 w-full min-w-0 rounded-full bg-[#f0f4f2] px-4 text-sm font-semibold text-[#111713] outline-none focus:ring-2 focus:ring-[#0B5D1E]/20"
                 >
                   <option value="All">Type: All</option>
                   <option value="Organic">Type: Organic</option>
@@ -265,14 +264,14 @@ export default function CategoryClient({ category }: { category: string }) {
               <select
                 value={sort}
                 onChange={(e) => setSort(e.target.value as any)}
-                className="h-11 rounded-full bg-[#f0f4f2] px-4 text-sm font-semibold outline-none"
+                className="h-11 w-full min-w-0 rounded-full bg-[#f0f4f2] px-4 text-sm font-semibold text-[#111713] outline-none focus:ring-2 focus:ring-[#0B5D1E]/20"
               >
                 <option value="low">Sort: Price (Low)</option>
                 <option value="high">Sort: Price (High)</option>
               </select>
             </div>
 
-            <div className="text-sm font-medium text-[#648770]">
+            <div className="text-sm font-medium text-[#648770] lg:text-right">
               Showing {filtered.length} results
             </div>
           </div>
@@ -307,17 +306,13 @@ export default function CategoryClient({ category }: { category: string }) {
                   <h3 className="text-lg font-extrabold leading-tight mb-1 text-[#111713]">
                     {p.name}
                   </h3>
-                 <p className="text-sm font-semibold text-[#648770]">
-  {p.packaging ?? p.subtitle ?? p.unit ?? ""}
-</p>
-
-
+                  <p className="text-sm font-semibold text-[#648770]">
+                    {p.packaging ?? p.subtitle ?? p.unit ?? ""}
+                  </p>
                 </div>
 
-                {/* ✅ Premium, aligned, non-promotional price box */}
                 <div className="rounded-2xl p-4 mb-5 border border-[#e0e8e3] bg-[#f6f8f7]">
                   <div className="grid grid-cols-2 gap-3">
-                    {/* Market */}
                     <div className="min-w-0">
                       <div className="text-[11px] font-bold uppercase tracking-wide text-[#6B7C72]">
                         {rateLabel}
@@ -327,7 +322,6 @@ export default function CategoryClient({ category }: { category: string }) {
                       </div>
                     </div>
 
-                    {/* MyVegMarket */}
                     <div className="min-w-0 text-right">
                       <div className="text-[11px] font-bold uppercase tracking-wide text-[#6B7C72]">
                         MyVegMarket
@@ -340,7 +334,6 @@ export default function CategoryClient({ category }: { category: string }) {
 
                   <div className="my-3 h-px bg-[#e0e8e3]" />
 
-                  {/* Small, neutral note (optional but premium) */}
                   <div className="flex items-center justify-between text-[12px] font-semibold text-[#648770]">
                     <span>Unit</span>
                     <span className="text-[#111713]/80">{p.unit}</span>
