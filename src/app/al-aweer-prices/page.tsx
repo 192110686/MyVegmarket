@@ -24,26 +24,46 @@ function formatAED(n: number) {
 function labelCat(c: ProductCategory) {
   return c.charAt(0).toUpperCase() + c.slice(1);
 }
+
+/** ✅ iOS detection (iPhone/iPad + iPadOS in desktop mode) */
 function isIOS() {
   if (typeof window === "undefined") return false;
-  return /iPad|iPhone|iPod/.test(navigator.userAgent) ||
-    (navigator.platform === "MacIntel" && (navigator as any).maxTouchPoints > 1);
+  return (
+    /iPad|iPhone|iPod/.test(navigator.userAgent) ||
+    (navigator.platform === "MacIntel" && (navigator as any).maxTouchPoints > 1)
+  );
 }
 
-function savePdfSmart(doc: any, filename: string) {
-  // iPhone/iOS: doc.save won't download, so open PDF in new tab
+/**
+ * ✅ Safari rule: window.open must happen immediately inside click event
+ * so we open a blank tab first, then later navigate it to the PDF blob URL.
+ */
+function openBlankTabIOS() {
+  if (!isIOS()) return null;
+  return window.open("", "_blank");
+}
+
+function savePdfSmart(doc: any, filename: string, iosTab: Window | null) {
+  // iPhone/iOS: doc.save won't download reliably
   if (isIOS()) {
     const blob = doc.output("blob");
     const url = URL.createObjectURL(blob);
-    window.open(url, "_blank");
-    setTimeout(() => URL.revokeObjectURL(url), 60000);
+
+    if (iosTab) {
+      iosTab.location.href = url;
+    } else {
+      // fallback if tab blocked
+      window.location.href = url;
+    }
+
+    // revoke later (don't revoke immediately on iOS)
+    setTimeout(() => URL.revokeObjectURL(url), 5 * 60 * 1000);
     return;
   }
 
   // Normal browsers (Android/PC)
   doc.save(filename);
 }
-
 
 export default function AlAweerPricesPage() {
   const [search, setSearch] = useState("");
@@ -127,6 +147,8 @@ export default function AlAweerPricesPage() {
   const handleClearCats = () => setSelectedCats([]);
 
   const handleDownloadPdf = () => {
+    const iosTab = openBlankTabIOS(); // ✅ MUST be first line for iPhone Safari
+
     try {
       const doc = new jsPDF({ orientation: "p", unit: "pt", format: "a4" });
 
@@ -186,14 +208,12 @@ export default function AlAweerPricesPage() {
         margin: { left: 60 },
 
         columnStyles: {
-  0: { cellWidth: 240 },             // Product (a bit wider)
-  1: { cellWidth: 110 },             // Origin (same)
-  2: { cellWidth: 90, halign: "left" },  // ✅ Unit wider (reduces the weird gap)
-  3: { cellWidth: 80, halign: "right" }, // ✅ Market smaller but right aligned
-},
+          0: { cellWidth: 240 },                  // Product
+          1: { cellWidth: 110 },                  // Origin
+          2: { cellWidth: 90, halign: "left" },   // Unit
+          3: { cellWidth: 80, halign: "right" },  // Market
+        },
 
-
-        // ✅ Fix: Market Rate header alignment matches values
         didParseCell: (data) => {
           if (data.section === "head" && data.column.index === 3) {
             data.cell.styles.halign = "right";
@@ -201,8 +221,10 @@ export default function AlAweerPricesPage() {
         },
       });
 
-      savePdfSmart(doc, `myvegmarket-al-aweer-price-report.pdf`);
+      // ✅ iPhone-safe save
+      savePdfSmart(doc, `myvegmarket-al-aweer-price-report.pdf`, iosTab);
     } catch (err) {
+      try { iosTab?.close(); } catch {}
       console.error(err);
       alert("PDF generation failed. Check console for details.");
     }
@@ -242,212 +264,209 @@ export default function AlAweerPricesPage() {
         </div>
 
         {/* Filter Bar */}
-       {/* Filter Bar */}
-<div className="bg-white text-[#111713] rounded-2xl p-4 mb-10 shadow-sm border border-[#e0e8e3]">
-  <div className="grid grid-cols-1 lg:grid-cols-[1fr_auto] gap-4 items-start">
-    {/* LEFT: filters */}
-    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3 min-w-0">
-      {/* Search */}
-      <div className="relative w-full min-w-0">
-        <span className="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-[#648770]">
-          search
-        </span>
-        <input
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          placeholder="Search products..."
-          className="h-11 w-full min-w-0 rounded-full bg-[#f0f4f2] pl-12 pr-4 text-sm font-semibold text-[#111713] placeholder:text-[#648770] outline-none focus:ring-2 focus:ring-[#0B5D1E]/20"
-        />
-      </div>
-
-      {/* Categories dropdown */}
-      <div className="relative w-full min-w-0" ref={catRef}>
-        <button
-          type="button"
-          onClick={() => setCatOpen((v) => !v)}
-          className="h-11 w-full min-w-0 rounded-full bg-[#f0f4f2] px-4 text-sm font-semibold outline-none flex items-center justify-between gap-2 text-[#111713] focus:ring-2 focus:ring-[#0B5D1E]/20"
-        >
-          <span className="truncate">
-            Category:{" "}
-            {selectedCats.length === ALL_CATEGORIES.length
-              ? "All"
-              : selectedCats.length === 0
-              ? "None"
-              : `${selectedCats.length} selected`}
-          </span>
-          <span className="material-symbols-outlined text-[18px] text-[#648770] shrink-0">
-            expand_more
-          </span>
-        </button>
-
-        {catOpen && (
-          <div className="absolute z-20 mt-2 w-full sm:w-[320px] rounded-2xl border border-[#e0e8e3] bg-white shadow-lg p-3">
-            <div className="flex items-center justify-between mb-2">
-              <span className="text-sm font-bold text-[#111713]">
-                Select Categories
-              </span>
-              <button
-                type="button"
-                onClick={() => setCatOpen(false)}
-                className="text-[#648770] hover:text-[#111713]"
-                aria-label="Close"
-              >
-                <span className="material-symbols-outlined text-[20px]">
-                  close
+        <div className="bg-white text-[#111713] rounded-2xl p-4 mb-10 shadow-sm border border-[#e0e8e3]">
+          <div className="grid grid-cols-1 lg:grid-cols-[1fr_auto] gap-4 items-start">
+            {/* LEFT: filters */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3 min-w-0">
+              {/* Search */}
+              <div className="relative w-full min-w-0">
+                <span className="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-[#648770]">
+                  search
                 </span>
-              </button>
-            </div>
+                <input
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                  placeholder="Search products..."
+                  className="h-11 w-full min-w-0 rounded-full bg-[#f0f4f2] pl-12 pr-4 text-sm font-semibold text-[#111713] placeholder:text-[#648770] outline-none focus:ring-2 focus:ring-[#0B5D1E]/20"
+                />
+              </div>
 
-            <div className="flex gap-2 mb-3">
-              <button
-                type="button"
-                onClick={handleSelectAllCats}
-                className="h-9 px-3 rounded-full border border-[#e0e8e3] bg-white text-sm font-bold hover:bg-[#f6f8f7]"
+              {/* Categories dropdown */}
+              <div className="relative w-full min-w-0" ref={catRef}>
+                <button
+                  type="button"
+                  onClick={() => setCatOpen((v) => !v)}
+                  className="h-11 w-full min-w-0 rounded-full bg-[#f0f4f2] px-4 text-sm font-semibold outline-none flex items-center justify-between gap-2 text-[#111713] focus:ring-2 focus:ring-[#0B5D1E]/20"
+                >
+                  <span className="truncate">
+                    Category:{" "}
+                    {selectedCats.length === ALL_CATEGORIES.length
+                      ? "All"
+                      : selectedCats.length === 0
+                      ? "None"
+                      : `${selectedCats.length} selected`}
+                  </span>
+                  <span className="material-symbols-outlined text-[18px] text-[#648770] shrink-0">
+                    expand_more
+                  </span>
+                </button>
+
+                {catOpen && (
+                  <div className="absolute z-20 mt-2 w-full sm:w-[320px] rounded-2xl border border-[#e0e8e3] bg-white shadow-lg p-3">
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="text-sm font-bold text-[#111713]">
+                        Select Categories
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => setCatOpen(false)}
+                        className="text-[#648770] hover:text-[#111713]"
+                        aria-label="Close"
+                      >
+                        <span className="material-symbols-outlined text-[20px]">
+                          close
+                        </span>
+                      </button>
+                    </div>
+
+                    <div className="flex gap-2 mb-3">
+                      <button
+                        type="button"
+                        onClick={handleSelectAllCats}
+                        className="h-9 px-3 rounded-full border border-[#e0e8e3] bg-white text-sm font-bold hover:bg-[#f6f8f7]"
+                      >
+                        Select All
+                      </button>
+                      <button
+                        type="button"
+                        onClick={handleClearCats}
+                        className="h-9 px-3 rounded-full border border-[#e0e8e3] bg-white text-sm font-bold hover:bg-[#f6f8f7]"
+                      >
+                        Clear
+                      </button>
+                    </div>
+
+                    <div className="space-y-2">
+                      {ALL_CATEGORIES.map((c) => {
+                        const checked = selectedCats.includes(c);
+                        return (
+                          <label
+                            key={c}
+                            className="flex items-center gap-3 text-sm font-semibold text-[#111713] cursor-pointer"
+                          >
+                            <input
+                              type="checkbox"
+                              checked={checked}
+                              onChange={() => handleToggleCategory(c)}
+                              className="h-4 w-4 accent-[#1db954]"
+                            />
+                            {labelCat(c)}
+                          </label>
+                        );
+                      })}
+                    </div>
+
+                    <div className="mt-3 text-[12px] font-semibold text-[#648770] break-words">
+                      Selected: {selectedCatsText}
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Origin */}
+              {showOriginFilter && (
+                <select
+                  value={origin}
+                  onChange={(e) => setOrigin(e.target.value)}
+                  className="h-11 w-full min-w-0 rounded-full bg-[#f0f4f2] px-4 text-sm font-semibold text-[#111713] outline-none focus:ring-2 focus:ring-[#0B5D1E]/20"
+                >
+                  {origins.map((o) => (
+                    <option key={o} value={o}>
+                      Origin: {o}
+                    </option>
+                  ))}
+                </select>
+              )}
+
+              {/* Type */}
+              {showTypeFilter && (
+                <select
+                  value={type}
+                  onChange={(e) => setType(e.target.value as any)}
+                  className="h-11 w-full min-w-0 rounded-full bg-[#f0f4f2] px-4 text-sm font-semibold text-[#111713] outline-none focus:ring-2 focus:ring-[#0B5D1E]/20"
+                >
+                  <option value="All">Type: All</option>
+                  <option value="Organic">Type: Organic</option>
+                  <option value="Regular">Type: Regular</option>
+                </select>
+              )}
+
+              {/* Sort */}
+              <select
+                value={sort}
+                onChange={(e) => setSort(e.target.value as any)}
+                className="h-11 w-full min-w-0 rounded-full bg-[#f0f4f2] px-4 text-sm font-semibold text-[#111713] outline-none focus:ring-2 focus:ring-[#0B5D1E]/20"
               >
-                Select All
-              </button>
-              <button
-                type="button"
-                onClick={handleClearCats}
-                className="h-9 px-3 rounded-full border border-[#e0e8e3] bg-white text-sm font-bold hover:bg-[#f6f8f7]"
-              >
-                Clear
-              </button>
+                <option value="low">Sort: Market (Low)</option>
+                <option value="high">Sort: Market (High)</option>
+              </select>
             </div>
 
-            <div className="space-y-2">
-              {ALL_CATEGORIES.map((c) => {
-                const checked = selectedCats.includes(c);
-                return (
-                  <label
-                    key={c}
-                    className="flex items-center gap-3 text-sm font-semibold text-[#111713] cursor-pointer"
-                  >
-                    <input
-                      type="checkbox"
-                      checked={checked}
-                      onChange={() => handleToggleCategory(c)}
-                      className="h-4 w-4 accent-[#1db954]"
-                    />
-                    {labelCat(c)}
-                  </label>
-                );
-              })}
-            </div>
-
-            <div className="mt-3 text-[12px] font-semibold text-[#648770] break-words">
-              Selected: {selectedCatsText}
+            {/* RIGHT: count */}
+            <div className="text-sm font-medium text-[#648770] lg:text-right">
+              Showing {filtered.length} results
             </div>
           </div>
-        )}
-      </div>
+        </div>
 
-      {/* Origin */}
-      {showOriginFilter && (
-        <select
-          value={origin}
-          onChange={(e) => setOrigin(e.target.value)}
-          className="h-11 w-full min-w-0 rounded-full bg-[#f0f4f2] px-4 text-sm font-semibold text-[#111713] outline-none focus:ring-2 focus:ring-[#0B5D1E]/20"
-        >
-          {origins.map((o) => (
-            <option key={o} value={o}>
-              Origin: {o}
-            </option>
+        {/* Table view */}
+        {/* ✅ MOBILE: premium stacked rows (no horizontal scroll) */}
+        <div className="md:hidden space-y-3">
+          {filtered.map((p) => (
+            <div
+              key={p.id}
+              className="bg-white border border-[#e0e8e3] rounded-2xl p-4 shadow-sm"
+            >
+              <div className="flex items-start justify-between gap-3">
+                <div className="min-w-0">
+                  <div className="font-extrabold text-[#111713] leading-tight">
+                    {p.name}
+                  </div>
+                  <div className="mt-1 text-sm font-semibold text-[#648770]">
+                    {p.origin} • {p.unit}
+                  </div>
+                </div>
+
+                <div className="shrink-0 text-right">
+                  <div className="text-[11px] font-bold uppercase tracking-wide text-[#6B7C72]">
+                    Market Rate
+                  </div>
+                  <div className="mt-1 text-sm font-extrabold text-[#111713] tabular-nums">
+                    {formatAED(p.marketAvg)}
+                  </div>
+                </div>
+              </div>
+            </div>
           ))}
-        </select>
-      )}
-
-      {/* Type */}
-      {showTypeFilter && (
-        <select
-          value={type}
-          onChange={(e) => setType(e.target.value as any)}
-          className="h-11 w-full min-w-0 rounded-full bg-[#f0f4f2] px-4 text-sm font-semibold text-[#111713] outline-none focus:ring-2 focus:ring-[#0B5D1E]/20"
-        >
-          <option value="All">Type: All</option>
-          <option value="Organic">Type: Organic</option>
-          <option value="Regular">Type: Regular</option>
-        </select>
-      )}
-
-      {/* Sort */}
-      <select
-        value={sort}
-        onChange={(e) => setSort(e.target.value as any)}
-        className="h-11 w-full min-w-0 rounded-full bg-[#f0f4f2] px-4 text-sm font-semibold text-[#111713] outline-none focus:ring-2 focus:ring-[#0B5D1E]/20"
-      >
-        <option value="low">Sort: Market (Low)</option>
-        <option value="high">Sort: Market (High)</option>
-      </select>
-    </div>
-
-    {/* RIGHT: count */}
-    <div className="text-sm font-medium text-[#648770] lg:text-right">
-      Showing {filtered.length} results
-    </div>
-  </div>
-</div>
-
-     {/* Table view */}
-       {/* ✅ MOBILE: premium stacked rows (no horizontal scroll) */}
-<div className="md:hidden space-y-3">
-  {filtered.map((p) => (
-    <div
-      key={p.id}
-      className="bg-white border border-[#e0e8e3] rounded-2xl p-4 shadow-sm"
-    >
-      <div className="flex items-start justify-between gap-3">
-        <div className="min-w-0">
-          <div className="font-extrabold text-[#111713] leading-tight">
-            {p.name}
-          </div>
-          <div className="mt-1 text-sm font-semibold text-[#648770]">
-            {p.origin} • {p.unit}
-          </div>
         </div>
 
-        <div className="shrink-0 text-right">
-          <div className="text-[11px] font-bold uppercase tracking-wide text-[#6B7C72]">
-            Market Rate
+        {/* ✅ DESKTOP: table view */}
+        <div className="hidden md:block bg-white border border-[#e0e8e3] rounded-2xl overflow-hidden shadow-sm">
+          <div className="grid grid-cols-12 gap-0 bg-green-600 text-white text-sm font-semibold">
+            <div className="col-span-6 px-5 py-3">Product</div>
+            <div className="col-span-3 px-5 py-3">Origin</div>
+            <div className="col-span-1 px-5 py-3">Unit</div>
+            <div className="col-span-2 px-5 py-3 text-right">Market Rate</div>
           </div>
-          <div className="mt-1 text-sm font-extrabold text-[#111713] tabular-nums">
-            {formatAED(p.marketAvg)}
-          </div>
+
+          {filtered.map((p, idx) => (
+            <div
+              key={p.id}
+              className={`grid grid-cols-12 gap-0 text-sm ${
+                idx % 2 === 0 ? "bg-white" : "bg-[#f6f8f7]"
+              }`}
+            >
+              <div className="col-span-6 px-5 py-3 font-semibold text-[#111713]">
+                {p.name}
+              </div>
+              <div className="col-span-3 px-5 py-3 text-[#111713]">{p.origin}</div>
+              <div className="col-span-1 px-5 py-3 text-[#111713]">{p.unit}</div>
+              <div className="col-span-2 px-5 py-3 text-right font-extrabold tabular-nums text-[#111713]">
+                {formatAED(p.marketAvg)}
+              </div>
+            </div>
+          ))}
         </div>
-      </div>
-    </div>
-  ))}
-</div>
-
-{/* ✅ DESKTOP: table view (clean, no min-w forcing mobile scroll) */}
-<div className="hidden md:block bg-white border border-[#e0e8e3] rounded-2xl overflow-hidden shadow-sm">
-  <div className="grid grid-cols-12 gap-0 bg-green-600 text-white text-sm font-semibold">
-    <div className="col-span-6 px-5 py-3">Product</div>
-    <div className="col-span-3 px-5 py-3">Origin</div>
-    <div className="col-span-1 px-5 py-3">Unit</div>
-    <div className="col-span-2 px-5 py-3 text-right">Market Rate</div>
-  </div>
-
-  {filtered.map((p, idx) => (
-    <div
-      key={p.id}
-      className={`grid grid-cols-12 gap-0 text-sm ${
-        idx % 2 === 0 ? "bg-white" : "bg-[#f6f8f7]"
-      }`}
-    >
-      <div className="col-span-6 px-5 py-3 font-semibold text-[#111713]">
-        {p.name}
-      </div>
-      <div className="col-span-3 px-5 py-3 text-[#111713]">{p.origin}</div>
-      <div className="col-span-1 px-5 py-3 text-[#111713]">{p.unit}</div>
-      <div className="col-span-2 px-5 py-3 text-right font-extrabold tabular-nums text-[#111713]">
-        {formatAED(p.marketAvg)}
-      </div>
-    </div>
-  ))}
-</div>
-
-
       </div>
     </main>
   );
