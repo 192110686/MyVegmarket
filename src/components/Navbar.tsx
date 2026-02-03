@@ -7,7 +7,7 @@ import { PRODUCTS } from "@/lib/products";
 
 const normalize = (s: string) => s.trim().toLowerCase();
 
-function useDebouncedValue<T>(value: T, delay = 200) {
+function useDebouncedValue<T>(value: T, delay = 150) {
   const [debounced, setDebounced] = useState(value);
   useEffect(() => {
     const t = setTimeout(() => setDebounced(value), delay);
@@ -16,15 +16,139 @@ function useDebouncedValue<T>(value: T, delay = 200) {
   return debounced;
 }
 
+type Suggestion = (typeof PRODUCTS)[number];
+
+function SearchBox({
+  q,
+  setQ,
+  suggestions,
+  onGo,
+}: {
+  q: string;
+  setQ: (v: string) => void;
+  suggestions: Suggestion[];
+  onGo: (text: string) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const wrapRef = useRef<HTMLDivElement | null>(null);
+
+  const query = normalize(q);
+  const showDropdown = open && query.length >= 2;
+
+  // ✅ close dropdown when clicking outside
+  useEffect(() => {
+    const onDown = (e: PointerEvent) => {
+      const target = e.target as Node;
+      if (wrapRef.current && !wrapRef.current.contains(target)) setOpen(false);
+    };
+    document.addEventListener("pointerdown", onDown);
+    return () => document.removeEventListener("pointerdown", onDown);
+  }, []);
+
+  return (
+    <div ref={wrapRef} className="relative w-full">
+      <span className="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-[#648770] text-xl">
+        search
+      </span>
+
+      <input
+        value={q}
+        onChange={(e) => {
+          setQ(e.target.value);
+          setOpen(true);
+        }}
+        onFocus={() => setOpen(true)}
+        onKeyDown={(e) => {
+          if (e.key === "Enter") {
+            e.preventDefault();
+            onGo(q);
+            setOpen(false);
+            (e.currentTarget as HTMLInputElement).blur();
+          }
+          if (e.key === "Escape") {
+            setOpen(false);
+            (e.currentTarget as HTMLInputElement).blur();
+          }
+        }}
+        className="w-full bg-white border border-[#e8efe9] rounded-full h-12 pl-12 pr-4
+                   focus:ring-2 focus:ring-[#0B5D1E]/30 text-base font-semibold
+                   text-[#111713] placeholder:text-[#648770] outline-none"
+        placeholder='Search "fruit", "apple", "tomato"...'
+        type="search"
+        inputMode="search"
+        enterKeyHint="search"
+        autoComplete="off"
+        autoCorrect="off"
+        spellCheck={false}
+        style={{ colorScheme: "light" }}
+      />
+
+      {showDropdown && (
+        <div className="absolute top-[54px] left-0 right-0 bg-white border border-[#e8efe9] rounded-2xl shadow-xl overflow-hidden z-50">
+          {suggestions.length === 0 ? (
+            <div className="px-4 py-3 text-sm text-[#648770]">
+              No matches. Try: <b>fruit</b>, <b>vegetables</b>, <b>eggs</b>, <b>apple</b>…
+            </div>
+          ) : (
+            <div className="max-h-[320px] overflow-auto">
+              {suggestions.map((p) => (
+                <button
+                  key={p.id}
+                  type="button"
+                  className="w-full text-left px-4 py-3 hover:bg-[#f1f5f3] flex items-center gap-3"
+                  // ✅ prevents input blur when selecting suggestion
+                  onMouseDown={(e) => e.preventDefault()}
+                  onPointerDown={(e) => e.preventDefault()}
+                  onClick={() => {
+                    window.location.href = `/product/${p.id}`;
+                    setOpen(false);
+                  }}
+                >
+                  <div className="h-10 w-10 rounded-xl overflow-hidden bg-[#f1f5f3] flex-shrink-0">
+                    <img
+                      src={p.image}
+                      alt={p.name}
+                      className="h-full w-full object-cover"
+                      loading="lazy"
+                    />
+                  </div>
+
+                  <div className="min-w-0">
+                    <div className="font-semibold text-[#111713] truncate">{p.name}</div>
+                    <div className="text-xs text-[#648770] truncate">
+                      {p.category.toUpperCase()} • {p.origin} • {p.unit}
+                    </div>
+                  </div>
+                </button>
+              ))}
+
+              <button
+                type="button"
+                className="w-full text-left px-4 py-3 hover:bg-[#f1f5f3] text-sm font-semibold text-[#0B5D1E]"
+                onMouseDown={(e) => e.preventDefault()}
+                onPointerDown={(e) => e.preventDefault()}
+                onClick={() => {
+                  onGo(q);
+                  setOpen(false);
+                }}
+              >
+                Search “{q}” →
+              </button>
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
 export default function Navbar() {
   const router = useRouter();
 
   const [q, setQ] = useState("");
-  const [open, setOpen] = useState(false);
   const [mobileMenu, setMobileMenu] = useState(false);
 
-  // ✅ debounce only for suggestions (typing stays instant)
-  const debouncedQ = useDebouncedValue(q, 200);
+  const debouncedQ = useDebouncedValue(q, 150);
   const query = normalize(debouncedQ);
 
   const suggestions = useMemo(() => {
@@ -49,31 +173,6 @@ export default function Navbar() {
     router.push("/products/vegetables");
   };
 
-  const desktopSearchRef = useRef<HTMLDivElement | null>(null);
-  const mobileSearchRef = useRef<HTMLDivElement | null>(null);
-
-  // ✅ close dropdown when clicking outside
-  useEffect(() => {
-    const onDown = (e: MouseEvent | PointerEvent) => {
-      const target = e.target as Node;
-
-      const insideDesktop =
-        desktopSearchRef.current && desktopSearchRef.current.contains(target);
-      const insideMobile =
-        mobileSearchRef.current && mobileSearchRef.current.contains(target);
-
-      if (!insideDesktop && !insideMobile) setOpen(false);
-    };
-
-    document.addEventListener("mousedown", onDown);
-    document.addEventListener("pointerdown", onDown);
-
-    return () => {
-      document.removeEventListener("mousedown", onDown);
-      document.removeEventListener("pointerdown", onDown);
-    };
-  }, []);
-
   // ✅ close mobile menu on resize
   useEffect(() => {
     const onResize = () => {
@@ -83,19 +182,16 @@ export default function Navbar() {
     return () => window.removeEventListener("resize", onResize);
   }, []);
 
-  // ✅ ESC closes dropdown + menu
+  // ✅ ESC closes menu
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") {
-        setOpen(false);
-        setMobileMenu(false);
-      }
+      if (e.key === "Escape") setMobileMenu(false);
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
   }, []);
 
-  // ✅ prevent body scroll when menu open
+  // ✅ prevent body scroll ONLY when menu open
   useEffect(() => {
     document.body.style.overflow = mobileMenu ? "hidden" : "";
     return () => {
@@ -103,110 +199,10 @@ export default function Navbar() {
     };
   }, [mobileMenu]);
 
-  const SearchBox = ({
-    wrapRef,
-    hideDropdown = false,
-  }: {
-    wrapRef: React.RefObject<HTMLDivElement | null>;
-    hideDropdown?: boolean;
-  }) => {
-    return (
-      <div ref={wrapRef} className="relative w-full min-w-0">
-        <span className="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-[#648770] text-xl">
-          search
-        </span>
-
-        <input
-          value={q}
-          onChange={(e) => {
-            setQ(e.target.value); // ✅ typing only updates q (no dropdown state spam)
-          }}
-          onFocus={() => setOpen(true)} // ✅ open dropdown only on focus
-          onKeyDown={(e) => {
-            if (e.key === "Enter") {
-              e.preventDefault();
-              go(q);
-              setOpen(false);
-              (e.currentTarget as HTMLInputElement).blur();
-            }
-            if (e.key === "Escape") setOpen(false);
-          }}
-          className="w-full bg-white border border-[#e8efe9] rounded-full h-12 pl-12 pr-4
-                     focus:ring-2 focus:ring-[#0B5D1E]/30 text-base font-semibold
-                     text-[#111713] placeholder:text-[#648770] outline-none"
-          placeholder='Search "fruit", "apple", "tomato"...'
-          type="search"
-          inputMode="search"
-          enterKeyHint="search"
-          autoComplete="off"
-          autoCorrect="off"
-          spellCheck={false}
-          style={{ colorScheme: "light" }}
-        />
-
-        {/* ✅ dropdown uses debounced query so it doesn’t lag typing */}
-        {!hideDropdown && open && query.length >= 2 && (
-          <div className="absolute top-[54px] left-0 right-0 bg-white border border-[#e8efe9] rounded-2xl shadow-xl overflow-hidden z-50">
-            {suggestions.length === 0 ? (
-              <div className="px-4 py-3 text-sm text-[#648770]">
-                No matches. Try: <b>fruit</b>, <b>vegetables</b>, <b>eggs</b>, <b>apple</b>…
-              </div>
-            ) : (
-              <div className="max-h-[320px] overflow-auto">
-                {suggestions.map((p) => (
-                  <button
-                    key={p.id}
-                    type="button"
-                    className="w-full text-left px-4 py-3 hover:bg-[#f1f5f3] flex items-center gap-3"
-                    // ✅ pointerdown is NOT passive -> no warning + smooth selection
-                    onPointerDown={(e) => e.preventDefault()}
-                    onClick={() => {
-                      router.push(`/product/${p.id}`);
-                      setOpen(false);
-                    }}
-                  >
-                    <div className="h-10 w-10 rounded-xl overflow-hidden bg-[#f1f5f3] flex-shrink-0">
-                      <img
-                        src={p.image}
-                        alt={p.name}
-                        className="h-full w-full object-cover"
-                        loading="lazy"
-                      />
-                    </div>
-
-                    <div className="min-w-0">
-                      <div className="font-semibold text-[#111713] truncate">{p.name}</div>
-                      <div className="text-xs text-[#648770] truncate">
-                        {p.category.toUpperCase()} • {p.origin} • {p.unit}
-                      </div>
-                    </div>
-                  </button>
-                ))}
-
-                <button
-                  type="button"
-                  className="w-full text-left px-4 py-3 hover:bg-[#f1f5f3] text-sm font-semibold text-[#0B5D1E]"
-                  onPointerDown={(e) => e.preventDefault()}
-                  onClick={() => {
-                    go(q);
-                    setOpen(false);
-                  }}
-                >
-                  Search “{q}” →
-                </button>
-              </div>
-            )}
-          </div>
-        )}
-      </div>
-    );
-  };
-
   return (
-    // ✅ IMPORTANT: remove backdrop blur on mobile (fixes Chrome mobile input focus issues)
     <header className="fixed top-0 left-0 right-0 z-50 bg-white md:bg-white/95 md:backdrop-blur border-b border-[#e8efe9]">
       <div className="max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-12">
-        <div className="h-[76px] flex items-center gap-3">
+        <div className="py-3 flex flex-wrap items-center gap-3">
           {/* Logo */}
           <Link
             href="/"
@@ -218,13 +214,17 @@ export default function Navbar() {
             MyVegmarket
           </Link>
 
-          {/* Desktop search */}
-          <div className="hidden md:flex flex-1 min-w-0 px-3">
-            <div className="w-full max-w-[620px] min-w-0">
-              <SearchBox wrapRef={desktopSearchRef} />
-            </div>
+          {/* ✅ SINGLE SearchBox (does not remount anymore) */}
+          <div className="w-full md:flex-1 md:min-w-[320px] md:max-w-[620px] order-last md:order-none">
+            <SearchBox
+              q={q}
+              setQ={setQ}
+              suggestions={suggestions}
+              onGo={go}
+            />
           </div>
 
+          {/* Right side */}
           <div className="ml-auto flex items-center gap-2 shrink-0">
             <nav className="hidden lg:flex items-center gap-8 font-semibold text-[#111713]">
               <Link href="/al-aweer-prices" className="hover:text-[#1db954]">
@@ -252,7 +252,7 @@ export default function Navbar() {
               type="button"
               aria-label="Open menu"
               onClick={() => setMobileMenu((v) => !v)}
-              className="lg:hidden h-11 w-11 rounded-xl border border-[#e8efe9] bg-white grid place-items-center shadow-sm hover:shadow-md transition flex-shrink-0"
+              className="lg:hidden h-11 w-11 rounded-xl border border-[#e8efe9] bg-white grid place-items-center shadow-sm hover:shadow-md transition"
             >
               <span className="material-symbols-outlined text-[#111713]">
                 {mobileMenu ? "close" : "menu"}
@@ -260,14 +260,9 @@ export default function Navbar() {
             </button>
           </div>
         </div>
-
-        {/* Mobile search */}
-        <div className="md:hidden pb-4">
-          <SearchBox wrapRef={mobileSearchRef} />
-        </div>
       </div>
 
-      {/* Mobile menu */}
+      {/* Mobile Menu */}
       {mobileMenu && (
         <div className="lg:hidden fixed inset-0 z-[60]">
           <div className="absolute inset-0 bg-black/20" onClick={() => setMobileMenu(false)} />
