@@ -1,5 +1,5 @@
 "use client";
-
+import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { useMemo, useState, useRef, useEffect } from "react";
 import { PRODUCTS, Product, ProductCategory } from "@/lib/products";
@@ -66,6 +66,11 @@ function savePdfSmart(doc: any, filename: string, iosTab: Window | null) {
 }
 
 export default function AlAweerPricesPage() {
+      const router = useRouter();
+
+  const openProduct = (id: string) => {
+    router.push(`/product/${id}`);
+  };
   const [search, setSearch] = useState("");
   const [origin, setOrigin] = useState("All");
   const [type, setType] = useState<"All" | "Organic" | "Regular">("All");
@@ -381,10 +386,18 @@ const handleDownloadPdf = async () => {
         {/* ✅ MOBILE: premium stacked rows (no horizontal scroll) */}
         <div className="md:hidden space-y-3">
           {filtered.map((p) => (
-            <div
-              key={p.id}
-              className="bg-white border border-[#e0e8e3] rounded-2xl p-4 shadow-sm"
-            >
+  <div
+    key={p.id}
+    role="button"
+    tabIndex={0}
+    onClick={() => openProduct(p.id)}
+    onKeyDown={(e) => {
+      if (e.key === "Enter" || e.key === " ") openProduct(p.id);
+    }}
+    className="bg-white border border-[#e0e8e3] rounded-2xl p-4 shadow-sm cursor-pointer
+               hover:shadow-md transition-all focus:outline-none focus:ring-2 focus:ring-[#0B5D1E]/20"
+  >
+
               <div className="flex items-start justify-between gap-3">
                 <div className="min-w-0">
                   <div className="font-extrabold text-[#111713] leading-tight">
@@ -418,12 +431,19 @@ const handleDownloadPdf = async () => {
           </div>
 
           {filtered.map((p, idx) => (
-            <div
-              key={p.id}
-              className={`grid grid-cols-12 gap-0 text-sm ${
-                idx % 2 === 0 ? "bg-white" : "bg-[#f6f8f7]"
-              }`}
-            >
+  <div
+    key={p.id}
+    role="button"
+    tabIndex={0}
+    onClick={() => openProduct(p.id)}
+    onKeyDown={(e) => {
+      if (e.key === "Enter" || e.key === " ") openProduct(p.id);
+    }}
+    className={`grid grid-cols-12 gap-0 text-sm cursor-pointer transition-colors
+      ${idx % 2 === 0 ? "bg-white" : "bg-[#f6f8f7]"}
+      hover:bg-[#eaf3ee] focus:outline-none focus:ring-2 focus:ring-[#0B5D1E]/15`}
+  >
+
               <div className="col-span-6 px-5 py-3 font-semibold text-[#111713]">
                 {p.name}
               </div>
