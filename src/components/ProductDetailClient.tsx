@@ -12,10 +12,15 @@ function safeImg(url: string) {
   );
 }
 
-export default function ProductDetailClient({ id }: { id: string }) {
+export default function ProductDetailClient({
+  id,
+  isAlAweerLite = false,
+}: {
+  id: string;
+  isAlAweerLite?: boolean;
+}) {
   const product = useMemo(() => PRODUCTS.find((p) => p.id === id), [id]);
 
-  const [range, setRange] = useState<"7D" | "30D" | "90D">("7D");
   const [openTrend, setOpenTrend] = useState(false);
 
   const title = product?.name ?? id;
@@ -54,17 +59,16 @@ export default function ProductDetailClient({ id }: { id: string }) {
               </div>
 
               <div className="aspect-square w-full bg-[#f0f4f2] flex items-center justify-center p-6">
-  <img
-    src={safeImg(product?.image || "")}
-    alt={title}
-    className="w-full h-full object-contain"
-    onError={(e) => {
-      (e.currentTarget as HTMLImageElement).src =
-        "https://images.unsplash.com/photo-1542838132-92c53300491e?auto=format&fit=crop&w=1600&q=80";
-    }}
-  />
-</div>
-
+                <img
+                  src={safeImg(product?.image || "")}
+                  alt={title}
+                  className="w-full h-full object-contain"
+                  onError={(e) => {
+                    (e.currentTarget as HTMLImageElement).src =
+                      "https://images.unsplash.com/photo-1542838132-92c53300491e?auto=format&fit=crop&w=1600&q=80";
+                  }}
+                />
+              </div>
             </div>
 
             {/* ✅ moved here (replacing thumbs) */}
@@ -80,8 +84,6 @@ export default function ProductDetailClient({ id }: { id: string }) {
 
           {/* Right */}
           <div className="lg:col-span-8 lg:-mt-2">
-            {/* ✅ removed Verified Supplier + SKU from here */}
-
             <h1 className="text-[52px] leading-[1.05] font-black text-[#111713]">
               {title}
             </h1>
@@ -93,7 +95,7 @@ export default function ProductDetailClient({ id }: { id: string }) {
               Origin: {origin} • {type} • {unit}
             </p>
 
-            {/* Price Analysis (UPDATED: neutral, no strike-through, no promo) */}
+            {/* Price Analysis */}
             <div className="mt-7 bg-white border border-[#e0e8e3] p-6 rounded-[28px] shadow-sm">
               <div className="flex items-center justify-between mb-6">
                 <h3 className="font-black flex items-center gap-2 text-lg text-[#111713]">
@@ -103,27 +105,19 @@ export default function ProductDetailClient({ id }: { id: string }) {
                   Price Analysis
                 </h3>
 
-                <div className="flex bg-[#f0f4f2] p-1 rounded-full">
-                  {(["7D", "30D", "90D"] as const).map((r) => (
-                    <button
-                      key={r}
-                      onClick={() => setRange(r)}
-                      className={`px-4 py-1.5 text-xs font-black rounded-full transition-all ${
-                        range === r
-                          ? "bg-white shadow-sm text-[#111713]"
-                          : "text-[#648770]"
-                      }`}
-                    >
-                      {r}
-                    </button>
-                  ))}
-                </div>
+                {/* ❌ Hide 7D/30D/90D tabs only for Al Aweer lite */}
+              
               </div>
 
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-stretch">
                 {/* Left: prices */}
                 <div className="rounded-2xl border border-[#e0e8e3] bg-[#fbfcfb] p-5">
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div
+                    className={`grid gap-4 ${
+                      isAlAweerLite ? "grid-cols-1" : "grid-cols-1 sm:grid-cols-2"
+                    }`}
+                  >
+                    {/* ✅ Market Average (always) */}
                     <div className="rounded-2xl bg-white border border-[#e0e8e3] p-4">
                       <div className="text-[11px] font-black uppercase tracking-wider text-[#648770] mb-1">
                         Market Average
@@ -136,55 +130,61 @@ export default function ProductDetailClient({ id }: { id: string }) {
                       </div>
                     </div>
 
-                    <div className="rounded-2xl bg-white border border-[#1db954]/25 p-4">
-                      <div className="text-[11px] font-black uppercase tracking-wider text-[#648770] mb-1">
-                        MyVegMarket Price
+                    {/* ❌ Hide MyVegMarket price box in Al Aweer lite */}
+                    {!isAlAweerLite && (
+                      <div className="rounded-2xl bg-white border border-[#1db954]/25 p-4">
+                        <div className="text-[11px] font-black uppercase tracking-wider text-[#648770] mb-1">
+                          MyVegMarket Price
+                        </div>
+                        <div className="text-2xl font-black text-[#1db954]">
+                          AED {myPrice.toFixed(2)}
+                        </div>
+                        <div className="text-xs text-[#648770] font-medium mt-1">
+                          Today’s listed price
+                        </div>
                       </div>
-                      <div className="text-2xl font-black text-[#1db954]">
-                        AED {myPrice.toFixed(2)}
-                      </div>
-                      <div className="text-xs text-[#648770] font-medium mt-1">
-                        Today’s listed price
-                      </div>
+                    )}
+                  </div>
+
+                  {/* ❌ Hide Difference section in Al Aweer lite */}
+                  {!isAlAweerLite && (
+                    <div className="mt-4 flex flex-wrap items-center gap-2">
+                      {(() => {
+                        const diff = marketAvg - myPrice;
+                        const pct = marketAvg ? (diff / marketAvg) * 100 : 0;
+                        const isLower = diff > 0;
+
+                        return (
+                          <>
+                            <span className="text-xs font-black uppercase tracking-wider text-[#648770]">
+                              Difference
+                            </span>
+
+                            <span
+                              className={[
+                                "text-xs font-black px-3 py-2 rounded-full border",
+                                isLower
+                                  ? "bg-[#1db954]/10 text-[#1db954] border-[#1db954]/20"
+                                  : "bg-[#111713]/5 text-[#111713] border-black/10",
+                              ].join(" ")}
+                            >
+                              AED {Math.abs(diff).toFixed(2)} (
+                              {Math.abs(pct).toFixed(1)}%)
+                            </span>
+
+                            <span className="text-xs text-[#648770] font-medium">
+                              {isLower
+                                ? "MyVegMarket is lower than market average"
+                                : "MyVegMarket is higher than market average"}
+                            </span>
+                          </>
+                        );
+                      })()}
                     </div>
-                  </div>
-
-                  <div className="mt-4 flex flex-wrap items-center gap-2">
-                    {(() => {
-                      const diff = marketAvg - myPrice;
-                      const pct = marketAvg ? (diff / marketAvg) * 100 : 0;
-                      const isLower = diff > 0;
-
-                      return (
-                        <>
-                          <span className="text-xs font-black uppercase tracking-wider text-[#648770]">
-                            Difference
-                          </span>
-
-                          <span
-                            className={[
-                              "text-xs font-black px-3 py-2 rounded-full border",
-                              isLower
-                                ? "bg-[#1db954]/10 text-[#1db954] border-[#1db954]/20"
-                                : "bg-[#111713]/5 text-[#111713] border-black/10",
-                            ].join(" ")}
-                          >
-                            AED {Math.abs(diff).toFixed(2)} (
-                            {Math.abs(pct).toFixed(1)}%)
-                          </span>
-
-                          <span className="text-xs text-[#648770] font-medium">
-                            {isLower
-                              ? "MyVegMarket is lower than market average"
-                              : "MyVegMarket is higher than market average"}
-                          </span>
-                        </>
-                      );
-                    })()}
-                  </div>
+                  )}
                 </div>
 
-                {/* Right: trend preview */}
+                {/* Right: trend preview (keep as-is) */}
                 <button
                   type="button"
                   onClick={() => setOpenTrend(true)}
@@ -279,55 +279,57 @@ export default function ProductDetailClient({ id }: { id: string }) {
           </div>
         </div>
 
-        {/* Bulk Pricing */}
-        <section className="mt-16 p-8 rounded-[30px] bg-[#edf4ef] border border-[#1db954]/10">
-          <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
-            <div>
-              <h2 className="text-2xl font-black mb-2 text-[#111713]">
-                Bulk Purchase Options
-              </h2>
-              <p className="text-[#648770] font-medium">
-                Are you a restaurant or hotel? Get tiered pricing for orders
-                above 50kg.
-              </p>
+        {/* ❌ Hide Bulk Purchase Options only for Al Aweer lite */}
+        {!isAlAweerLite && (
+          <section className="mt-16 p-8 rounded-[30px] bg-[#edf4ef] border border-[#1db954]/10">
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
+              <div>
+                <h2 className="text-2xl font-black mb-2 text-[#111713]">
+                  Bulk Purchase Options
+                </h2>
+                <p className="text-[#648770] font-medium">
+                  Are you a restaurant or hotel? Get tiered pricing for orders
+                  above 50kg.
+                </p>
+              </div>
+
+              <button className="bg-[#111713] text-white font-black px-8 py-3 rounded-full flex items-center gap-2 hover:opacity-90">
+                <span className="material-symbols-outlined">request_quote</span>
+                Request Quote
+              </button>
             </div>
 
-            <button className="bg-[#111713] text-white font-black px-8 py-3 rounded-full flex items-center gap-2 hover:opacity-90">
-              <span className="material-symbols-outlined">request_quote</span>
-              Request Quote
-            </button>
-          </div>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-8">
+              <div className="text-center p-4">
+                <p className="text-xs text-[#648770] font-black uppercase">
+                  10 - 50 KG
+                </p>
+                <p className="text-lg font-black text-[#1db954]">AED 11.50</p>
+              </div>
 
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-8">
-            <div className="text-center p-4">
-              <p className="text-xs text-[#648770] font-black uppercase">
-                10 - 50 KG
-              </p>
-              <p className="text-lg font-black text-[#1db954]">AED 11.50</p>
-            </div>
+              <div className="text-center p-4 border-l border-[#d7e3dc]">
+                <p className="text-xs text-[#648770] font-black uppercase">
+                  50 - 200 KG
+                </p>
+                <p className="text-lg font-black text-[#1db954]">AED 10.75</p>
+              </div>
 
-            <div className="text-center p-4 border-l border-[#d7e3dc]">
-              <p className="text-xs text-[#648770] font-black uppercase">
-                50 - 200 KG
-              </p>
-              <p className="text-lg font-black text-[#1db954]">AED 10.75</p>
-            </div>
+              <div className="text-center p-4 border-l border-[#d7e3dc]">
+                <p className="text-xs text-[#648770] font-black uppercase">
+                  200 - 500 KG
+                </p>
+                <p className="text-lg font-black text-[#1db954]">AED 10.00</p>
+              </div>
 
-            <div className="text-center p-4 border-l border-[#d7e3dc]">
-              <p className="text-xs text-[#648770] font-black uppercase">
-                200 - 500 KG
-              </p>
-              <p className="text-lg font-black text-[#1db954]">AED 10.00</p>
+              <div className="text-center p-4 border-l border-[#d7e3dc]">
+                <p className="text-xs text-[#648770] font-black uppercase">
+                  500+ KG
+                </p>
+                <p className="text-lg font-black text-[#1db954]">Custom</p>
+              </div>
             </div>
-
-            <div className="text-center p-4 border-l border-[#d7e3dc]">
-              <p className="text-xs text-[#648770] font-black uppercase">
-                500+ KG
-              </p>
-              <p className="text-lg font-black text-[#1db954]">Custom</p>
-            </div>
-          </div>
-        </section>
+          </section>
+        )}
       </div>
 
       {/* Full chart modal */}

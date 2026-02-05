@@ -1,288 +1,72 @@
-"use client";
+import Link from "next/link";
 
-import { useState } from "react";
-import { getSupabase } from "@/lib/supabaseClient";
-
-type PaymentStatus = "unpaid" | "paid";
-
-type ExporterRow = {
-  id: string;
-  exporter_id: string;
-  full_name: string;
-  company_name: string;
-  email: string;
-  phone: string;
-  trade_license_no: string;
-  country: string;
-  city: string;
-
-  // ✅ real status logic
-  approved: boolean;
-
-  // keep status optional (old rows / old schema won’t crash)
-  status?: "pending" | "approved" | "rejected";
-
-  payment_status: PaymentStatus;
-};
-
-export default function ContainersListingPage() {
-  const [loading, setLoading] = useState(false);
-
-  // simple "local login" for now using email (later we’ll replace with real auth)
-  const [emailLookup, setEmailLookup] = useState("");
-  const [profile, setProfile] = useState<ExporterRow | null>(null);
-
-  // Form fields
-  const [fullName, setFullName] = useState("");
-  const [companyName, setCompanyName] = useState("");
-  const [phone, setPhone] = useState("");
-  const [tradeLicenseNo, setTradeLicenseNo] = useState("");
-  const [country, setCountry] = useState("UAE");
-  const [city, setCity] = useState("");
-
-  // ✅ Always get supabase inside component (client side) + guard
-  function requireSupabase() {
-    const supabase = getSupabase();
-    if (!supabase) {
-      alert(
-        "Supabase env missing. Add NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY (Vercel + .env.local)."
-      );
-      return null;
-    }
-    return supabase;
-  }
-
-  async function fetchProfileByEmail(email: string) {
-    const supabase = requireSupabase();
-    if (!supabase) return;
-
-    if (!email.trim()) return alert("Please enter your email.");
-
-    setLoading(true);
-
-    const { data, error } = await supabase
-      .from("exporter_applications")
-      .select("*")
-      .eq("email", email.trim().toLowerCase())
-      .order("created_at", { ascending: false })
-      .limit(1)
-      .maybeSingle();
-
-    setLoading(false);
-
-    if (error) {
-      alert(error.message);
-      return;
-    }
-
-    setProfile((data as any) ?? null);
-  }
-
-  async function submitApplication() {
-    const supabase = requireSupabase();
-    if (!supabase) return;
-
-    if (!emailLookup.trim()) return alert("Please enter your email.");
-    if (!fullName.trim()) return alert("Enter full name");
-    if (!companyName.trim()) return alert("Enter company name");
-    if (!phone.trim()) return alert("Enter phone");
-    if (!tradeLicenseNo.trim()) return alert("Enter trade license number");
-    if (!country.trim()) return alert("Enter country");
-    if (!city.trim()) return alert("Enter city");
-
-    setLoading(true);
-
-    const payload = {
-      full_name: fullName.trim(),
-      contact_person: fullName.trim(),
-      company_name: companyName.trim(),
-      email: emailLookup.trim().toLowerCase(),
-      phone: phone.trim(),
-      trade_license_no: tradeLicenseNo.trim(),
-      country: country.trim(),
-      city: city.trim(),
-      // ✅ DON’T SEND approved/payment_status from frontend (DB defaults handle it)
-    };
-
-    const { data, error } = await supabase
-      .from("exporter_applications")
-      .insert(payload)
-      .select("*")
-      .single();
-
-    setLoading(false);
-
-    if (error) {
-      alert(error.message);
-      return;
-    }
-
-    setProfile(data as any);
-  }
-
-  // ✅ Derived UI status (no enum headaches)
-  const displayStatus = profile?.approved ? "approved" : "pending";
-
-  const isLocked =
-    !profile || profile.approved !== true || profile.payment_status !== "paid";
-
+export default function ContainersListingLandingPage() {
   return (
-    <main className="bg-[#f6f8f7] min-h-screen px-6 lg:px-20 pt-10 pb-24">
+    <main className="min-h-[calc(100vh-80px)] bg-[#f6f8f7] px-4 sm:px-6 lg:px-12 py-10">
       <div className="max-w-[1100px] mx-auto">
-        <h1 className="text-4xl font-black text-[#111713]">Containers Listing</h1>
-        <p className="text-[#648770] font-medium mt-2">
-          Exporter verification is required before listing containers.
-        </p>
-
-        {/* Step 1: lookup */}
-        <div className="mt-6 bg-white border border-[#e0e8e3] rounded-[26px] p-6">
-          <div className="flex flex-col md:flex-row gap-3 md:items-center md:justify-between">
-            <div className="flex-1">
-              <div className="text-sm font-black text-[#111713]">Enter your email</div>
-              <input
-                value={emailLookup}
-                onChange={(e) => setEmailLookup(e.target.value)}
-                placeholder="your@email.com"
-                className="mt-2 w-full rounded-2xl border border-[#e0e8e3] px-4 py-3 outline-none focus:ring-2 focus:ring-[#1db954]/20"
-              />
-            </div>
-
-            <button
-              onClick={() => fetchProfileByEmail(emailLookup)}
-              disabled={loading || !emailLookup.trim()}
-              className="h-[48px] px-6 rounded-full bg-[#111713] text-white font-black disabled:opacity-50"
-            >
-              {loading ? "Checking..." : "Check Status"}
-            </button>
-          </div>
-
-          {/* If profile exists */}
-          {profile && (
-            <div className="mt-5 rounded-2xl bg-[#f6f8f7] border border-[#e0e8e3] p-5">
-              <div className="flex flex-wrap gap-3 items-center justify-between">
-                <div>
-                  <div className="text-xs font-black text-[#648770] uppercase">
-                    Your Exporter ID
-                  </div>
-                  <div className="text-2xl font-black text-[#111713]">
-                    {profile.exporter_id}
-                  </div>
-                </div>
-
-                <div className="flex gap-2 flex-wrap">
-                  <span className="px-3 py-2 rounded-full text-xs font-black border bg-white">
-                    Status: {displayStatus}
-                  </span>
-
-                  <span className="px-3 py-2 rounded-full text-xs font-black border bg-white">
-                    Payment: {profile.payment_status}
-                  </span>
-                </div>
+        <div className="flex justify-center">
+          <div className="w-full max-w-[820px] bg-white border border-[#e0e8e3] rounded-[34px] px-6 sm:px-10 py-10 shadow-[0_10px_40px_rgba(17,23,19,0.06)]">
+            <div className="text-center">
+              <div className="text-[11px] tracking-[0.18em] font-extrabold text-[#648770] uppercase">
+                Containers Marketplace
               </div>
 
-              {isLocked ? (
-                <div className="mt-4 text-sm font-medium text-[#648770]">
-                  🔒 Containers listing is locked until you are <b>approved</b> and <b>paid</b>.
-                </div>
-              ) : (
-                <div className="mt-4 text-sm font-medium text-[#1db954]">
-                  ✅ Unlocked. You can now list containers.
-                </div>
-              )}
-            </div>
-          )}
-        </div>
+              <h1 className="mt-3 text-[34px] sm:text-[44px] leading-tight font-black text-[#111713]">
+                Choose what you want to do
+              </h1>
 
-        {/* Step 2: application form (only if no profile) */}
-        {!profile && (
-          <div className="mt-8 bg-white border border-[#e0e8e3] rounded-[26px] p-6">
-            <h2 className="text-xl font-black text-[#111713]">Verification Form</h2>
-            <p className="text-sm text-[#648770] font-medium mt-1">
-              Fill details once. After submit, it cannot be edited.
-            </p>
-
-            <div className="mt-5 grid grid-cols-1 md:grid-cols-2 gap-4">
-              <Input label="Full Name" value={fullName} onChange={setFullName} />
-              <Input label="Company Name" value={companyName} onChange={setCompanyName} />
-              <Input label="Phone" value={phone} onChange={setPhone} />
-              <Input
-                label="Trade License No"
-                value={tradeLicenseNo}
-                onChange={setTradeLicenseNo}
-              />
-              <Input label="Country" value={country} onChange={setCountry} />
-              <Input label="City" value={city} onChange={setCity} />
-            </div>
-
-            <button
-              onClick={submitApplication}
-              disabled={loading}
-              className="mt-6 w-full md:w-auto px-8 py-3 rounded-full bg-[#1db954] text-white font-black disabled:opacity-50"
-            >
-              {loading ? "Submitting..." : "Submit Verification"}
-            </button>
-          </div>
-        )}
-
-        {/* Step 3: Payment Gate + Container Listing (placeholder for now) */}
-        {profile && (
-          <div className="mt-8 bg-white border border-[#e0e8e3] rounded-[26px] p-6">
-            <h2 className="text-xl font-black text-[#111713]">Subscription & Listing</h2>
-
-            {profile.approved !== true ? (
-              <p className="mt-2 text-[#648770] font-medium">
-                Your account is under review. We will approve manually.
+              <p className="mt-3 text-[#648770] font-medium max-w-[520px] mx-auto leading-relaxed">
+                View export-ready containers (subscription required) or list a
+                container after exporter verification.
               </p>
-            ) : profile.payment_status !== "paid" ? (
-              <div className="mt-2">
-                <p className="text-[#648770] font-medium">
-                  Approved ✅ Now complete payment to unlock containers listing.
-                </p>
+            </div>
 
-                <button
-                  className="mt-4 px-8 py-3 rounded-full bg-[#111713] text-white font-black"
-                  onClick={() => alert("Next step: integrate payment gateway")}
-                >
-                  Pay & Subscribe
-                </button>
-              </div>
-            ) : (
-              <div className="mt-2">
-                <p className="text-[#1db954] font-medium">
-                  Payment done ✅ Listing unlocked.
-                </p>
-                <button
-                  className="mt-4 px-8 py-3 rounded-full bg-[#1db954] text-white font-black"
-                  onClick={() => alert("Next step: open container listing form")}
-                >
-                  List a Container
-                </button>
-              </div>
-            )}
+            <div className="mt-8 flex flex-col sm:flex-row items-center justify-center gap-4">
+              <Link
+                href="/containers-listing/view"
+                className="inline-flex items-center justify-center gap-2 w-full sm:w-auto min-w-[220px] px-7 py-3.5 rounded-full bg-[#111713] text-white font-black"
+              >
+                {/* search icon */}
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+                  <path
+                    d="M10.5 18a7.5 7.5 0 1 1 0-15 7.5 7.5 0 0 1 0 15Z"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                  />
+                  <path
+                    d="M21 21l-4.3-4.3"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                  />
+                </svg>
+                View Containers
+              </Link>
+
+              <Link
+                href="/containers-listing/list"
+                className="inline-flex items-center justify-center gap-2 w-full sm:w-auto min-w-[220px] px-7 py-3.5 rounded-full bg-[#1db954] text-white font-black"
+              >
+                {/* plus icon */}
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+                  <path
+                    d="M12 5v14M5 12h14"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                  />
+                </svg>
+                List Container
+              </Link>
+            </div>
+
+            <div className="mt-6 text-center text-xs font-bold text-[#8aa59a] flex items-center justify-center gap-2">
+              <span className="inline-block w-2 h-2 rounded-full bg-[#8aa59a]" />
+              EXPORTERS REQUIRE ADMIN APPROVAL.
+            </div>
           </div>
-        )}
+        </div>
       </div>
     </main>
-  );
-}
-
-function Input({
-  label,
-  value,
-  onChange,
-}: {
-  label: string;
-  value: string;
-  onChange: (v: string) => void;
-}) {
-  return (
-    <label className="block">
-      <div className="text-sm font-black text-[#111713]">{label}</div>
-      <input
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-        className="mt-2 w-full rounded-2xl border border-[#e0e8e3] px-4 py-3 outline-none focus:ring-2 focus:ring-[#1db954]/20"
-      />
-    </label>
   );
 }

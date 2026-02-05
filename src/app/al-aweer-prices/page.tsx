@@ -68,9 +68,9 @@ function savePdfSmart(doc: any, filename: string, iosTab: Window | null) {
 export default function AlAweerPricesPage() {
       const router = useRouter();
 
-  const openProduct = (id: string) => {
-    router.push(`/product/${id}`);
-  };
+ const openProduct = (id: string) => {
+  router.push(`/product/${id}?from=alAweer`);
+};
   const [search, setSearch] = useState("");
   const [origin, setOrigin] = useState("All");
   const [type, setType] = useState<"All" | "Organic" | "Regular">("All");
