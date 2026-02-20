@@ -70,7 +70,7 @@ export default function Home() {
   items={[
     {
       key: "vegetables",
-      title: "Fresh Vegetables",
+      title: "Vegetables",
       subtitle: "",
       href: "/products/vegetables",
       img: "https://images.unsplash.com/photo-1540420773420-3366772f4999?auto=format&fit=crop&w=1400&q=80",
@@ -79,7 +79,7 @@ export default function Home() {
     },
     {
   key: "fruits",
-  title: "Fresh Fruits",
+  title: "Fruits",
   subtitle: "",
   href: "/products/fruits",
   img: "https://images.unsplash.com/photo-1519996529931-28324d5a630e?auto=format&fit=crop&w=1400&q=80",
@@ -108,7 +108,7 @@ export default function Home() {
 
     {
       key: "eggs",
-      title: "Fresh Eggs",
+      title: "Eggs",
       subtitle: "",
       href: "/products/eggs",
       img: "https://images.unsplash.com/photo-1587486913049-53fc88980cfc?auto=format&fit=crop&w=1400&q=80",
@@ -117,7 +117,7 @@ export default function Home() {
     },
     {
       key: "oils",
-      title: "Fresh Oils",
+      title: "Oils",
       subtitle: "",
       href: "/products/oils",
       img: "https://images.unsplash.com/photo-1474979266404-7eaacbcd87c5?auto=format&fit=crop&w=1400&q=80",

@@ -10,6 +10,7 @@
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.93.3",
+    "bcryptjs": "^3.0.3",
     "jspdf": "^4.0.0",
     "jspdf-autotable": "^5.0.7",
     "lightweight-charts": "^5.1.0",
@@ -21,13 +22,21 @@
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",
-    "@types/node": "^20",
+    "@types/node": "^20.19.33",
     "@types/pdfkit": "^0.17.4",
     "@types/react": "^19",
     "@types/react-dom": "^19",
-    "eslint": "^9",
-    "eslint-config-next": "16.1.4",
+    "eslint": "^10.0.0",
+    "eslint-config-next": "^0.2.4",
     "tailwindcss": "^4",
     "typescript": "^5"
+  },
+  "overrides": {
+    "ajv": "^8.18.0",
+    "minimatch": "^10.2.1",
+    "tmp": "^0.2.4",
+    "glob": "^10.5.0",
+    "rimraf": "^6.0.1",
+    "inquirer": "^9.3.7"
   }
 }

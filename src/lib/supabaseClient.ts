@@ -1,20 +1,16 @@
-// src/lib/supabaseClient.ts
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 
 let client: SupabaseClient | null = null;
 
 export function getSupabase(): SupabaseClient | null {
-  // ✅ Only run on client (browser)
+  // ✅ Do NOT throw. Just return null on server.
   if (typeof window === "undefined") return null;
 
-  // ✅ Cache client so we don't recreate every call
-  if (client) return client;
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+  if (!url || !key) return null;
 
-  if (!supabaseUrl || !supabaseAnonKey) return null;
-
-  client = createClient(supabaseUrl, supabaseAnonKey);
+  if (!client) client = createClient(url, key);
   return client;
 }

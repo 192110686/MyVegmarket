@@ -2,9 +2,26 @@
 
 import Link from "next/link";
 import { useMemo, useState } from "react";
-import { PRODUCTS, Product, ProductCategory } from "@/lib/products";
+import { usePathname } from "next/navigation"; // ✅ added
+import type { DbProduct, DbCategory } from "@/lib/productsDb";
 
-const CATEGORY_META: Record<ProductCategory, { title: string; desc: string }> = {
+/**
+ * NOTE:
+ * - This component is now DB-driven.
+ * - It expects `products` to be passed from the server page.
+ */
+const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL;
+
+function storagePublicUrl(path?: string | null) {
+  if (!path) return "";
+  if (!SUPABASE_URL) {
+    console.error("NEXT_PUBLIC_SUPABASE_URL is missing in .env.local");
+    return "";
+  }
+  return `${SUPABASE_URL}/storage/v1/object/public/product_images/${path}`;
+}
+
+const CATEGORY_META: Record<DbCategory, { title: string; desc: string }> = {
   vegetables: {
     title: "Vegetables",
     desc: "Compare Al Aweer rates with MyVegMarket pricing. Updated regularly.",
@@ -31,54 +48,62 @@ const CATEGORY_META: Record<ProductCategory, { title: string; desc: string }> = 
   },
 };
 
-function safeImg(url: string) {
+function safeImg(url?: string | null) {
   return (
     url ||
     "https://images.unsplash.com/photo-1542838132-92c53300491e?auto=format&fit=crop&w=1600&q=80"
   );
 }
 
-function formatAED(n: number) {
-  const num = Number.isFinite(n) ? n : 0;
+function formatAED(n?: number | null) {
+  const num = Number.isFinite(Number(n)) ? Number(n) : 0;
   return `AED ${num.toFixed(2)}`;
 }
 
-function parseCategory(raw: string): ProductCategory {
-  const c = (raw || "").toLowerCase();
-  const allowed: ProductCategory[] = [
-    "vegetables",
-    "fruits",
-    "spices",
-    "nuts",
-    "eggs",
-    "oils",
-  ];
-  return allowed.includes(c as ProductCategory)
-    ? (c as ProductCategory)
-    : "vegetables";
+/** ✅ Sort should use ONLY Al Aweer / Market rate */
+function getMarketSortPrice(p: DbProduct): number | null {
+  const market = Number(p.market_price_aed);
+  if (Number.isFinite(market) && market > 0) return market;
+  return null; // missing/0 => push to bottom
 }
 
-export default function CategoryClient({ category }: { category: string }) {
-  const cat = parseCategory(category);
+export default function CategoryClient({
+  category,
+  products,
+}: {
+  category: DbCategory;
+  products: DbProduct[];
+}) {
+  const cat = category;
   const meta = CATEGORY_META[cat];
+
+  const pathname = usePathname(); // ✅ added (we will pass this to containers page)
 
   const [search, setSearch] = useState("");
   const [origin, setOrigin] = useState("All");
+  // Keeping these for UI compatibility (DB currently doesn’t store type yet)
   const [type, setType] = useState<"All" | "Organic" | "Regular">("All");
   const [sort, setSort] = useState<"low" | "high">("low");
 
-  const baseList = useMemo(
-    () => PRODUCTS.filter((p) => p.category === cat),
-    [cat]
-  );
+  // ✅ DB is source of truth
+  const baseList = useMemo(() => products, [products]);
 
   const origins = useMemo(() => {
-    const set = new Set(baseList.map((p) => p.origin));
-    return ["All", ...Array.from(set)];
+    const cleaned = baseList
+      .map((p) => (p.origin_country || "").trim())
+      .filter(Boolean);
+
+    const set = new Set(cleaned.map((x) => x.toLowerCase()));
+
+    // keep display nicely (Title Case)
+    const display = Array.from(set).map((x) => x[0].toUpperCase() + x.slice(1));
+
+    return ["All", ...display];
   }, [baseList]);
 
-  const showTypeFilter = useMemo(() => baseList.some((p) => p.type), [baseList]);
-  const showOriginFilter = useMemo(() => origins.length > 2, [origins]);
+  // ✅ Always show like your old UI
+  const showOriginFilter = true;
+  const showTypeFilter = true;
 
   const filtered = useMemo(() => {
     let list = [...baseList];
@@ -86,32 +111,61 @@ export default function CategoryClient({ category }: { category: string }) {
     if (search.trim()) {
       const s = search.toLowerCase();
       list = list.filter((p) => {
-        const subtitle = (p.packaging ?? p.subtitle ?? p.unit ?? "").toLowerCase();
+        const subtitle = (p.packaging ?? p.unit ?? "").toLowerCase();
+        const org = (p.origin_country ?? "").toLowerCase();
         return (
           p.name.toLowerCase().includes(s) ||
           subtitle.includes(s) ||
-          p.origin.toLowerCase().includes(s)
+          org.includes(s)
         );
       });
     }
 
-    if (showOriginFilter && origin !== "All") list = list.filter((p) => p.origin === origin);
-    if (showTypeFilter && type !== "All") list = list.filter((p) => p.type === type);
+    if (showOriginFilter && origin !== "All") {
+      const o = origin.trim().toLowerCase();
+      list = list.filter(
+        (p) => (p.origin_country || "").trim().toLowerCase() === o
+      );
+    }
 
-    list.sort((a, b) =>
-      sort === "low" ? a.myPrice - b.myPrice : b.myPrice - a.myPrice
-    );
+    // No type in DB yet, keep logic for future
+    if (showTypeFilter && type !== "All") {
+      // placeholder for future type column
+    }
 
-    return list;
+    // ✅ FIXED SORT: ONLY Al Aweer/Market rate + missing prices always at bottom + stable sort
+    const decorated = list.map((p, idx) => ({
+      p,
+      idx,
+      price: getMarketSortPrice(p),
+    }));
+
+    decorated.sort((a, b) => {
+      const aMissing = a.price === null;
+      const bMissing = b.price === null;
+
+      // Missing/0 market rates go to bottom
+      if (aMissing && !bMissing) return 1;
+      if (!aMissing && bMissing) return -1;
+
+      // Both missing -> keep original order
+      if (aMissing && bMissing) return a.idx - b.idx;
+
+      // Both have prices
+      const diff =
+        sort === "low" ? a.price! - b.price! : b.price! - a.price!;
+      return diff !== 0 ? diff : a.idx - b.idx;
+    });
+
+    return decorated.map((x) => x.p);
   }, [baseList, search, origin, type, sort, showOriginFilter, showTypeFilter]);
 
-  // ✅ Universal download handler: works across platforms best-possible
   const handleDownloadPdf = async () => {
     const qs = new URLSearchParams({
       category: cat,
       search,
       origin,
-      type,
+      type, // kept for your existing API signature
       sort,
     });
 
@@ -119,16 +173,13 @@ export default function CategoryClient({ category }: { category: string }) {
     const filename = `myvegmarket-${cat}-price-report.pdf`;
 
     try {
-      // 1) Fetch PDF bytes
       const res = await fetch(url, { method: "GET" });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
 
       const blob = await res.blob();
-
-      // 2) Best UX on mobile: Share sheet (Save to Files)
       const file = new File([blob], filename, { type: "application/pdf" });
 
-      // @ts-ignore - canShare typing may not exist in TS lib
+      // @ts-ignore
       if (navigator.canShare?.({ files: [file] })) {
         // @ts-ignore
         await navigator.share({
@@ -139,7 +190,6 @@ export default function CategoryClient({ category }: { category: string }) {
         return;
       }
 
-      // 3) Normal download (desktop/Android)
       const blobUrl = URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = blobUrl;
@@ -149,8 +199,7 @@ export default function CategoryClient({ category }: { category: string }) {
       a.click();
       a.remove();
       setTimeout(() => URL.revokeObjectURL(blobUrl), 60_000);
-    } catch (err) {
-      // 4) Last fallback: open in a new tab (iOS Chrome/Google app often needs this)
+    } catch {
       window.open(url, "_blank", "noopener,noreferrer");
     }
   };
@@ -166,7 +215,9 @@ export default function CategoryClient({ category }: { category: string }) {
           <Link className="hover:text-[#1db954]" href="/">
             Home
           </Link>
-          <span className="material-symbols-outlined text-base">chevron_right</span>
+          <span className="material-symbols-outlined text-base">
+            chevron_right
+          </span>
           <span className="text-[#111713] font-bold">{meta.title}</span>
         </div>
 
@@ -223,7 +274,7 @@ export default function CategoryClient({ category }: { category: string }) {
                 </select>
               )}
 
-              {/* Type */}
+              {/* Type (placeholder for future DB field) */}
               {showTypeFilter && (
                 <select
                   value={type}
@@ -255,14 +306,14 @@ export default function CategoryClient({ category }: { category: string }) {
 
         {/* Grid */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-          {filtered.map((p: Product) => (
+          {filtered.map((p) => (
             <div
               key={p.id}
               className="group bg-white rounded-2xl overflow-hidden border border-[#e0e8e3] shadow-sm hover:shadow-xl transition-all flex flex-col"
             >
               <div className="relative h-[210px] overflow-hidden bg-[#f0f4f2]">
                 <img
-                  src={safeImg(p.image)}
+                  src={safeImg((p as any).image_public_url)}
                   alt={p.name}
                   className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                   onError={(e) => {
@@ -272,8 +323,8 @@ export default function CategoryClient({ category }: { category: string }) {
                 />
 
                 <div className="absolute top-3 left-3 bg-white/95 backdrop-blur px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider text-[#111713] flex items-center gap-2 shadow-sm">
-                  <span className={`w-2.5 h-2.5 rounded-full ${p.badgeColor}`} />
-                  {p.origin}
+                  <span className="w-2.5 h-2.5 rounded-full bg-[#1db954]" />
+                  {p.origin_country || "Origin"}
                 </div>
               </div>
 
@@ -283,7 +334,7 @@ export default function CategoryClient({ category }: { category: string }) {
                     {p.name}
                   </h3>
                   <p className="text-sm font-semibold text-[#648770]">
-                    {p.packaging ?? p.subtitle ?? p.unit ?? ""}
+                    {p.packaging ?? p.unit ?? ""}
                   </p>
                 </div>
 
@@ -294,7 +345,7 @@ export default function CategoryClient({ category }: { category: string }) {
                         {rateLabel}
                       </div>
                       <div className="mt-1 text-[15px] font-extrabold text-[#111713] tabular-nums">
-                        {formatAED(p.marketAvg)}
+                        {formatAED(p.market_price_aed)}
                       </div>
                     </div>
 
@@ -303,7 +354,7 @@ export default function CategoryClient({ category }: { category: string }) {
                         MyVegMarket
                       </div>
                       <div className="mt-1 text-[15px] font-extrabold text-[#0B5D1E] tabular-nums">
-                        {formatAED(p.myPrice)}
+                        {formatAED(p.myveg_price_aed)}
                       </div>
                     </div>
                   </div>
@@ -312,22 +363,31 @@ export default function CategoryClient({ category }: { category: string }) {
 
                   <div className="flex items-center justify-between text-[12px] font-semibold text-[#648770]">
                     <span>Unit</span>
-                    <span className="text-[#111713]/80">{p.unit}</span>
+                    <span className="text-[#111713]/80">{p.unit ?? ""}</span>
                   </div>
                 </div>
 
                 <div className="mt-auto flex gap-3 items-center">
+                  {/* ✅ UPDATED: pass current category URL so containers page can go back without 404 */}
                   <Link
-                    href={`/product/${p.id}`}
+                    href={`/product/${p.slug}/containers?back=${encodeURIComponent(
+                      pathname || "/"
+                    )}`}
                     className="flex-1 bg-[#1db954] text-white font-extrabold text-sm h-11 rounded-full hover:opacity-95 transition-opacity flex items-center justify-center"
                   >
-                    View Details
+                    View Containers
                   </Link>
                 </div>
               </div>
             </div>
           ))}
         </div>
+
+        {filtered.length === 0 && (
+          <div className="mt-10 text-[#648770] font-medium">
+            No products available in this category yet.
+          </div>
+        )}
       </div>
     </main>
   );

@@ -236,17 +236,10 @@ export default function Navbar() {
               <Link href="/services" className="hover:text-[#1db954]">
                 Services
               </Link>
-              <Link href="/containers-listing" className="hover:text-[#1db954]">
-                Containers Listing
+              <Link href="/containers-listing/list" className="hover:text-[#1db954]">
+                Post Your Ad
               </Link>
             </nav>
-
-            <Link
-              href="/login"
-              className="hidden lg:flex h-11 px-5 rounded-full bg-[#f0f4f2] text-[#111713] font-bold items-center justify-center hover:bg-[#e6efe9] whitespace-nowrap"
-            >
-              Login
-            </Link>
 
             <button
               type="button"
