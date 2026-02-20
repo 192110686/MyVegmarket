@@ -145,7 +145,7 @@ function AdminPublishPageInner() {
       <div className="max-w-[1100px] mx-auto">
         <div className="mb-6 flex items-center justify-between">
           <Link
-            href="/containers-listing"
+            href="/containers-listing/list"
             className="inline-flex items-center gap-2 text-sm font-semibold text-[#648770] hover:text-[#1db954] transition"
           >
             <span className="text-base">←</span>

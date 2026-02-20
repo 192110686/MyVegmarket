@@ -256,7 +256,7 @@ function CreateContainerListingInner() {
     if (error) return alert(error.message);
 
     alert("✅ Submitted! Admin will review and publish soon.");
-    router.push("/containers-listing");
+    router.push("/containers-listing/list");
   }
 
   return (
