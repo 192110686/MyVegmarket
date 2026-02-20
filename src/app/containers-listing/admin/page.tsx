@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useMemo, useState } from "react";
+import { Suspense, useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
 
 type ListingRow = {
@@ -45,7 +45,17 @@ function imgPublicUrl(path?: string | null) {
   return `${SUPABASE_URL}/storage/v1/object/public/${BUCKET}/${path}`;
 }
 
+/** ✅ Outer component only provides Suspense boundary (required for useSearchParams) */
 export default function AdminPublishPage() {
+  return (
+    <Suspense fallback={<div className="p-6 font-bold">Loading…</div>}>
+      <AdminPublishPageInner />
+    </Suspense>
+  );
+}
+
+/** ✅ Inner component contains your original code (UNCHANGED UI/logic) */
+function AdminPublishPageInner() {
   const params = useSearchParams();
   const secret = (params.get("secret") ?? "").trim();
 
@@ -64,9 +74,12 @@ export default function AdminPublishPage() {
     setErr(null);
 
     try {
-      const res = await fetch(`/api/admin/container-publish?secret=${encodeURIComponent(secret)}`, {
-        method: "GET",
-      });
+      const res = await fetch(
+        `/api/admin/container-publish?secret=${encodeURIComponent(secret)}`,
+        {
+          method: "GET",
+        }
+      );
       const json = await res.json();
 
       if (!json?.ok) {
@@ -148,7 +161,9 @@ export default function AdminPublishPage() {
         </div>
 
         <section className="bg-white border border-[#e0e8e3] rounded-[32px] px-6 sm:px-10 py-10 shadow-[0_8px_30px_rgba(17,23,19,0.06)]">
-          <h1 className="text-3xl sm:text-4xl font-black text-[#111713]">Pending Container Listings</h1>
+          <h1 className="text-3xl sm:text-4xl font-black text-[#111713]">
+            Pending Container Listings
+          </h1>
           <p className="mt-2 text-[#648770] font-medium">
             Approve → copies row into <b>containers</b> (and fills <b>image_url</b>). Reject → marks rejected.
           </p>

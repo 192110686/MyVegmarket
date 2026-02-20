@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useMemo, useState } from "react";
+import { Suspense, useEffect, useMemo, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { getSupabase } from "@/lib/supabaseClient";
 
@@ -51,7 +51,17 @@ type ProductLine = {
   price: string;
 };
 
+/** ✅ Suspense boundary wrapper (required for useSearchParams in build) */
 export default function CreateContainerListingPage() {
+  return (
+    <Suspense fallback={<div className="p-6 font-bold">Loading…</div>}>
+      <CreateContainerListingInner />
+    </Suspense>
+  );
+}
+
+/** ✅ Your original code moved here (no logic/UI changes) */
+function CreateContainerListingInner() {
   const router = useRouter();
   const params = useSearchParams();
   const email = (params.get("email") ?? "").trim().toLowerCase(); // later we’ll lock behind login

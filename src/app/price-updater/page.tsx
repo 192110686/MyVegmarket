@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useMemo, useState } from "react";
+import { Suspense, useEffect, useMemo, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { getSupabase } from "@/lib/supabaseClient";
 
@@ -91,7 +91,17 @@ async function sha256Hex(input: string) {
     .join("");
 }
 
+/** ✅ ONLY CHANGE: wrap in Suspense boundary */
 export default function PriceUpdaterPage() {
+  return (
+    <Suspense fallback={<div className="p-6 font-bold">Loading…</div>}>
+      <PriceUpdaterInner />
+    </Suspense>
+  );
+}
+
+/** ✅ ONLY CHANGE: move useSearchParams() inside this inner component */
+function PriceUpdaterInner() {
   const router = useRouter();
   const sp = useSearchParams();
 
