@@ -465,26 +465,31 @@ export default function ExporterVerifyPage() {
     <main className="min-h-screen bg-[#f6f8f7] px-4 sm:px-6 lg:px-12 pt-8 pb-20">
       <div className="max-w-[1100px] mx-auto">
         <div className="flex items-center justify-between">
-    <Link
+   
+  <Link
   href="/"
   aria-label="Back"
   className="w-11 h-11 rounded-full bg-white border border-[#d7e3dc]
              flex items-center justify-center shadow-md active:scale-95 transition"
 >
-  <span
-    className="material-symbols-outlined"
-    style={{
-      fontSize: 28,
-      color: "#000000",       // ✅ force pure black
-      fontWeight: 900,
-      lineHeight: 1,
-      opacity: 1,
-      WebkitTextFillColor: "#000000", // ✅ fixes some mobile rendering
-    }}
+  <svg
+    width="22"
+    height="22"
+    viewBox="0 0 24 24"
+    aria-hidden="true"
+    style={{ display: "block" }}
   >
-    arrow_back
-  </span>
+    <path
+      d="M15 18l-6-6 6-6"
+      fill="none"
+      stroke="#000"
+      strokeWidth="3.5"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    />
+  </svg>
 </Link>
+  
 
           <button
             type="button"
