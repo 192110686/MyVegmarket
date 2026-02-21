@@ -468,10 +468,20 @@ export default function ExporterVerifyPage() {
     <Link
   href="/"
   aria-label="Back"
-  className="w-11 h-11 rounded-full bg-white border border-[#e0e8e3]
-             flex items-center justify-center shadow-sm hover:shadow-md transition"
+  className="w-11 h-11 rounded-full bg-white border border-[#d7e3dc]
+             flex items-center justify-center shadow-md active:scale-95 transition"
 >
-  <span className="material-symbols-outlined text-[26px] text-[#111713] font-black">
+  <span
+    className="material-symbols-outlined"
+    style={{
+      fontSize: 28,
+      color: "#000000",       // ✅ force pure black
+      fontWeight: 900,
+      lineHeight: 1,
+      opacity: 1,
+      WebkitTextFillColor: "#000000", // ✅ fixes some mobile rendering
+    }}
+  >
     arrow_back
   </span>
 </Link>
