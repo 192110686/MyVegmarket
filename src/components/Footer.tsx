@@ -16,11 +16,11 @@ export default function Footer() {
               <span className="w-8 h-8 rounded-full bg-[#0B5D1E] flex items-center justify-center">
                 <span className="material-symbols-outlined text-white text-[18px]">eco</span>
               </span>
-              <span className="text-[#0B5D1E]">MyVegMarket</span>
+              <span className="text-[#0B5D1E]">MyVegmarket</span>
             </div>
 
             <p className="text-sm text-[#648770] leading-6 max-w-sm">
-              MyVegMarket provides approved Al Aweer reference rates and bulk sourcing support
+              MyVegmarket provides approved Al Aweer reference rates and bulk sourcing support
               for UAE groceries, restaurants, and exporters. Track daily movement, compare
               categories, and source confidently.
             </p>
@@ -79,7 +79,7 @@ export default function Footer() {
         </div>
 
         <div className="mt-10 sm:mt-12 pt-6 sm:pt-8 border-t border-[#e7efe9] text-xs text-[#648770] flex flex-col sm:flex-row items-center justify-between gap-4">
-          <p>© {new Date().getFullYear()} MyVegMarket. All rights reserved.</p>
+          <p>© {new Date().getFullYear()} MyVegmarket. All rights reserved.</p>
           <FooterActions />
         </div>
       </div>
