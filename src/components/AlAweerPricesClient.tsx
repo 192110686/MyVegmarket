@@ -279,8 +279,7 @@ export default function AlAweerPricesClient({
               Al Aweer Prices
             </h1>
             <p className="text-[#648770] text-lg font-medium mt-3 max-w-xl">
-              Approved on: <span className="font-bold text-[#111713]">{selectedDate}</span> • MIN /
-              MAX + last Market (AED) & updated time.
+              Approved on: <span className="font-bold text-[#111713]">{selectedDate}</span> • Verified daily market reference: Min/Max, latest rate (AED), and update time.
             </p>
 
             {toast && (

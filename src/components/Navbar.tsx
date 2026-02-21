@@ -307,17 +307,6 @@ export default function Navbar({ searchIndex }: { searchIndex: Suggestion[] }) {
               >
                 Containers Listing
               </button>
-
-              <button
-                type="button"
-                className="w-full text-left px-5 py-4 font-bold text-[#0B5D1E] hover:bg-[#f1f5f3]"
-                onClick={() => {
-                  setMobileMenu(false);
-                  router.push("/login");
-                }}
-              >
-                Login
-              </button>
             </div>
           </div>
         </div>
