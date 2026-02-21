@@ -362,12 +362,25 @@ export default function ExporterVerifyPage() {
       <main className="min-h-screen bg-[#f6f8f7] px-4 sm:px-6 lg:px-12 pt-8 pb-20">
         <div className="max-w-[900px] mx-auto">
           <div className="flex items-center justify-between">
-           <Link
-  href="/"
-  className="w-11 h-11 rounded-full bg-white border border-[#e0e8e3] flex items-center justify-center font-black"
->
-  ←
-</Link>
+  
+    <Link
+      href="/"
+      aria-label="Back"
+      className="w-12 h-12 rounded-full bg-[#111713] border border-[#111713]
+                 flex items-center justify-center shadow-lg z-[9999] relative
+                 active:scale-95 transition"
+    >
+      <svg width="26" height="26" viewBox="0 0 24 24" aria-hidden="true">
+        <path
+          d="M15 18l-6-6 6-6"
+          fill="none"
+          stroke="#ffffff"
+          strokeWidth="3.8"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        />
+      </svg>
+    </Link>
             <div className="w-11 h-11 rounded-full bg-white border border-[#e0e8e3] flex items-center justify-center">
               🔐
             </div>
