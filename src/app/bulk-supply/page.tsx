@@ -103,7 +103,7 @@ export default function BulkSupplyPage() {
         <div className="bg-white border border-[#e0e8e3] rounded-3xl shadow-sm p-8">
           <h2 className="text-2xl font-black text-[#111713] mb-2">How It Works</h2>
           <p className="text-[#648770] font-medium mb-8">
-            Simple 4-step flow for buyers and exporters using MyVegMarket.
+            Simple 4-step flow for buyers and exporters using MyVegmarket.
           </p>
 
           <div className="grid grid-cols-1 md:grid-cols-4 gap-5">
@@ -149,7 +149,7 @@ export default function BulkSupplyPage() {
 </div>
 
           <p className="mt-6 text-xs text-[#648770] font-medium">
-            Note: MyVegMarket provides reference rates and listing access. Final pricing and transactions happen outside the platform.
+            Note: MyVegmarket provides reference rates and listing access. Final pricing and transactions happen outside the platform.
           </p>
         </div>
       </div>

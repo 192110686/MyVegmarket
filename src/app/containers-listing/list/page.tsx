@@ -363,24 +363,27 @@ export default function ExporterVerifyPage() {
         <div className="max-w-[900px] mx-auto">
           <div className="flex items-center justify-between">
   
+  
     <Link
       href="/"
       aria-label="Back"
-      className="w-12 h-12 rounded-full bg-[#111713] border border-[#111713]
-                 flex items-center justify-center shadow-lg z-[9999] relative
-                 active:scale-95 transition"
+      className="w-12 h-12 rounded-full bg-white border border-[#d7e3dc]
+                 flex items-center justify-center shadow-md z-[9999] relative
+                 hover:shadow-lg active:scale-95 transition"
     >
       <svg width="26" height="26" viewBox="0 0 24 24" aria-hidden="true">
         <path
           d="M15 18l-6-6 6-6"
           fill="none"
-          stroke="#ffffff"
+          stroke="#000000"       // ✅ black arrow
           strokeWidth="3.8"
           strokeLinecap="round"
           strokeLinejoin="round"
         />
       </svg>
     </Link>
+ 
+    
             <div className="w-11 h-11 rounded-full bg-white border border-[#e0e8e3] flex items-center justify-center">
               🔐
             </div>
