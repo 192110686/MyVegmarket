@@ -3,7 +3,6 @@
 import Link from "next/link";
 import { useMemo, useState, useRef, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { PRODUCTS } from "@/lib/products";
 
 const normalize = (s: string) => s.trim().toLowerCase();
 
@@ -16,7 +15,14 @@ function useDebouncedValue<T>(value: T, delay = 150) {
   return debounced;
 }
 
-type Suggestion = (typeof PRODUCTS)[number];
+export type Suggestion = {
+  id: string;
+  name: string;
+  origin: string;
+  unit: string;
+  category: string;
+  image: string;
+};
 
 function SearchBox({
   q,
@@ -35,7 +41,6 @@ function SearchBox({
   const query = normalize(q);
   const showDropdown = open && query.length >= 2;
 
-  // ✅ close dropdown when clicking outside
   useEffect(() => {
     const onDown = (e: PointerEvent) => {
       const target = e.target as Node;
@@ -96,7 +101,6 @@ function SearchBox({
                   key={p.id}
                   type="button"
                   className="w-full text-left px-4 py-3 hover:bg-[#f1f5f3] flex items-center gap-3"
-                  // ✅ prevents input blur when selecting suggestion
                   onMouseDown={(e) => e.preventDefault()}
                   onPointerDown={(e) => e.preventDefault()}
                   onClick={() => {
@@ -105,18 +109,26 @@ function SearchBox({
                   }}
                 >
                   <div className="h-10 w-10 rounded-xl overflow-hidden bg-[#f1f5f3] flex-shrink-0">
-                    <img
-                      src={p.image}
-                      alt={p.name}
-                      className="h-full w-full object-cover"
-                      loading="lazy"
-                    />
+                   <img
+  src={
+    p.image && p.image.trim()
+      ? p.image
+      : "https://images.unsplash.com/photo-1542838132-92c53300491e?auto=format&fit=crop&w=200&q=60"
+  }
+  alt={p.name}
+  className="h-full w-full object-cover"
+  loading="lazy"
+  onError={(e) => {
+    (e.currentTarget as HTMLImageElement).src =
+      "https://images.unsplash.com/photo-1542838132-92c53300491e?auto=format&fit=crop&w=200&q=60";
+  }}
+/>
                   </div>
 
                   <div className="min-w-0">
                     <div className="font-semibold text-[#111713] truncate">{p.name}</div>
                     <div className="text-xs text-[#648770] truncate">
-                      {p.category.toUpperCase()} • {p.origin} • {p.unit}
+                      {String(p.category || "").toUpperCase()} • {p.origin} • {p.unit}
                     </div>
                   </div>
                 </button>
@@ -142,7 +154,7 @@ function SearchBox({
   );
 }
 
-export default function Navbar() {
+export default function Navbar({ searchIndex }: { searchIndex: Suggestion[] }) {
   const router = useRouter();
 
   const [q, setQ] = useState("");
@@ -153,12 +165,14 @@ export default function Navbar() {
 
   const suggestions = useMemo(() => {
     if (!query || query.length < 2) return [];
-    return PRODUCTS.filter((p) => {
-      const name = p.name.toLowerCase();
-      const origin = p.origin.toLowerCase();
-      return name.includes(query) || origin.includes(query);
-    }).slice(0, 6);
-  }, [query]);
+    return searchIndex
+      .filter((p) => {
+        const name = (p.name || "").toLowerCase();
+        const origin = (p.origin || "").toLowerCase();
+        return name.includes(query) || origin.includes(query);
+      })
+      .slice(0, 6);
+  }, [query, searchIndex]);
 
   const go = (text: string) => {
     const t = normalize(text);
@@ -173,7 +187,6 @@ export default function Navbar() {
     router.push("/products/vegetables");
   };
 
-  // ✅ close mobile menu on resize
   useEffect(() => {
     const onResize = () => {
       if (window.innerWidth >= 1024) setMobileMenu(false);
@@ -182,7 +195,6 @@ export default function Navbar() {
     return () => window.removeEventListener("resize", onResize);
   }, []);
 
-  // ✅ ESC closes menu
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (e.key === "Escape") setMobileMenu(false);
@@ -191,7 +203,6 @@ export default function Navbar() {
     return () => window.removeEventListener("keydown", onKey);
   }, []);
 
-  // ✅ prevent body scroll ONLY when menu open
   useEffect(() => {
     document.body.style.overflow = mobileMenu ? "hidden" : "";
     return () => {
@@ -203,7 +214,6 @@ export default function Navbar() {
     <header className="fixed top-0 left-0 right-0 z-50 bg-white md:bg-white/95 md:backdrop-blur border-b border-[#e8efe9]">
       <div className="max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-12">
         <div className="py-3 flex flex-wrap items-center gap-3">
-          {/* Logo */}
           <Link
             href="/"
             className="flex items-center gap-3 font-black text-lg sm:text-xl text-[#0B5D1E] shrink-0"
@@ -214,17 +224,10 @@ export default function Navbar() {
             MyVegmarket
           </Link>
 
-          {/* ✅ SINGLE SearchBox (does not remount anymore) */}
           <div className="w-full md:flex-1 md:min-w-[320px] md:max-w-[620px] order-last md:order-none">
-            <SearchBox
-              q={q}
-              setQ={setQ}
-              suggestions={suggestions}
-              onGo={go}
-            />
+            <SearchBox q={q} setQ={setQ} suggestions={suggestions} onGo={go} />
           </div>
 
-          {/* Right side */}
           <div className="ml-auto flex items-center gap-2 shrink-0">
             <nav className="hidden lg:flex items-center gap-8 font-semibold text-[#111713]">
               <Link href="/al-aweer-prices" className="hover:text-[#1db954]">
@@ -255,7 +258,6 @@ export default function Navbar() {
         </div>
       </div>
 
-      {/* Mobile Menu */}
       {mobileMenu && (
         <div className="lg:hidden fixed inset-0 z-[60]">
           <div className="absolute inset-0 bg-black/20" onClick={() => setMobileMenu(false)} />
@@ -300,7 +302,7 @@ export default function Navbar() {
                 className="w-full text-left px-5 py-4 font-semibold hover:bg-[#f1f5f3]"
                 onClick={() => {
                   setMobileMenu(false);
-                  router.push("/containers-listing");
+                  router.push("/containers-listing/list");
                 }}
               >
                 Containers Listing

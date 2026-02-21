@@ -80,7 +80,7 @@ export async function getProductBySlug(slug: string) {
     )
     .eq("active", true)
     .eq("slug", cleanSlug)
-    .limit(2);
+    .limit(2000);
 
   if (error) throw new Error(error.message);
 

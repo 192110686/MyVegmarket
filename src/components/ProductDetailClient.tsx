@@ -1,10 +1,17 @@
 "use client";
 
 import Link from "next/link";
+import dynamic from "next/dynamic";
 import { useEffect, useMemo, useState } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import type { DbProduct } from "@/lib/productsDb";
-import ProductTrendTVChart, { type TVPoint } from "@/components/ProductTrendTVChart";
+import type { TVPoint } from "@/components/ProductTrendTVChart";
+
+// ✅ Lazy-load chart so product page loads faster (no "Loading..." text shown)
+const ProductTrendTVChart = dynamic(() => import("@/components/ProductTrendTVChart"), {
+  ssr: false,
+  loading: () => null,
+});
 
 type RangeKey = "1D" | "10D" | "1W" | "1M" | "3M" | "6M" | "1Y" | "MAX";
 
@@ -119,6 +126,15 @@ export default function ProductDetailClient({
   const [data, setData] = useState<TrendPoint[]>([]);
   const [avgText, setAvgText] = useState("Avg: -");
 
+  // ✅ avoid window access during render (prevents hydration quirks)
+  const [chartHeight, setChartHeight] = useState(560);
+  useEffect(() => {
+    const calc = () => setChartHeight(window.innerWidth < 640 ? 420 : 560);
+    calc();
+    window.addEventListener("resize", calc);
+    return () => window.removeEventListener("resize", calc);
+  }, []);
+
   const title = product.name;
   const origin = product.origin_country ?? "UAE";
   const type = "Regular"; // DB doesn't have type yet (we can add later)
@@ -132,7 +148,13 @@ export default function ProductDetailClient({
   // ✅ Pull shipment from DB (products.shipment_mode)
   const ship = shipmentLabel(product.shipment_mode);
 
-  const openTrendPage = () => {
+  // ✅ Prefetch chart chunk BEFORE opening overlay (feels instant, no "loading" text)
+  const openTrendPageFast = async () => {
+    try {
+      await import("@/components/ProductTrendTVChart");
+    } catch {
+      // ignore – overlay will still open, chart will load when ready
+    }
     const qs = new URLSearchParams(searchParams.toString());
     qs.set("trend", "1");
     router.push(`${pathname}?${qs.toString()}`, { scroll: false });
@@ -187,9 +209,6 @@ export default function ProductDetailClient({
 
   // ✅ Market series only (UI is market-only; chart can still accept myveg empty)
   const marketSeries = useMemo(() => toTVSeries(data, "marketAvg"), [data]);
-
-  const chartHeight =
-    typeof window !== "undefined" && window.innerWidth < 640 ? 420 : 560;
 
   return (
     <>
@@ -247,14 +266,9 @@ export default function ProductDetailClient({
             {/* Chart */}
             <div className="max-w-[1400px] mx-auto mt-4 h-[calc(100vh-170px)] min-h-0">
               <div className="h-full rounded-[26px] bg-white border border-[#e0e8e3] shadow-sm p-4 overflow-hidden">
-                {loading ? (
-                  <div className="h-full grid place-items-center text-[#648770] font-medium">
-                    Loading chart...
-                  </div>
-                ) : data.length === 0 ? (
-                  <div className="h-full grid place-items-center text-[#648770] font-medium">
-                    No trend data available.
-                  </div>
+                {loading || data.length === 0 ? (
+                  // ✅ No "Loading..." text — subtle skeleton only
+                  <div className="h-full w-full rounded-2xl bg-[#f6f8f7] animate-pulse" />
                 ) : (
                   <ProductTrendTVChart
                     title={`${title} - Market Price Trend`}
@@ -262,7 +276,7 @@ export default function ProductDetailClient({
                     myveg={[]} // ✅ hide MyVegMarket series
                     market={marketSeries}
                     height={chartHeight}
-                    onAvgTextChange={(text) => setAvgText(text || "Avg: -")}
+                    onAvgTextChange={(text: string) => setAvgText(text || "Avg: -")}
                   />
                 )}
               </div>
@@ -324,25 +338,24 @@ export default function ProductDetailClient({
                 {title}
               </h1>
 
-             <div className="mt-3 text-[#648770] font-medium">
-  {/* Line 1: Origin */}
-  <p className="flex items-center gap-2">
-    <span className="material-symbols-outlined text-base">location_on</span>
-    <span>
-      Origin: {origin} • {type} • {unit}
-    </span>
-  </p>
+              <div className="mt-3 text-[#648770] font-medium">
+                {/* Line 1: Origin */}
+                <p className="flex items-center gap-2">
+                  <span className="material-symbols-outlined text-base">location_on</span>
+                  <span>
+                    Origin: {origin} • {type} • {unit}
+                  </span>
+                </p>
 
-  {/* Line 2: Shipment (only if DB has value) */}
-  {ship && (
-    <p className="mt-1 flex items-center gap-2 text-[#648770] font-medium">
-    <span className="material-symbols-outlined text-base">{ship.icon}</span>
-    <span className="font-medium">Shipment:</span>
-    <span>{ship.text}</span>
-  </p>
-  )}
-</div>
-
+                {/* Line 2: Shipment (only if DB has value) */}
+                {ship && (
+                  <p className="mt-1 flex items-center gap-2 text-[#648770] font-medium">
+                    <span className="material-symbols-outlined text-base">{ship.icon}</span>
+                    <span className="font-medium">Shipment:</span>
+                    <span>{ship.text}</span>
+                  </p>
+                )}
+              </div>
 
               {/* Price Analysis */}
               <div className="mt-7 bg-white border border-[#e0e8e3] p-6 rounded-[28px] shadow-sm">
@@ -376,11 +389,7 @@ export default function ProductDetailClient({
                   {/* Right: trend preview */}
                   <button
                     type="button"
-                    onClick={() => {
-                      const qs = new URLSearchParams(searchParams.toString());
-                      qs.set("trend", "1");
-                      router.push(`${pathname}?${qs.toString()}`, { scroll: false });
-                    }}
+                    onClick={openTrendPageFast}
                     className="rounded-2xl bg-[#f6f8f7] border border-[#e0e8e3] p-5 flex flex-col justify-between text-left hover:shadow-md hover:shadow-black/5 transition"
                     title="Click to view full trend"
                   >
@@ -480,30 +489,22 @@ export default function ProductDetailClient({
 
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-8">
                 <div className="text-center p-4">
-                  <p className="text-xs text-[#648770] font-black uppercase">
-                    10 - 50 KG
-                  </p>
+                  <p className="text-xs text-[#648770] font-black uppercase">10 - 50 KG</p>
                   <p className="text-lg font-black text-[#1db954]">AED 11.50</p>
                 </div>
 
                 <div className="text-center p-4 border-l border-[#d7e3dc]">
-                  <p className="text-xs text-[#648770] font-black uppercase">
-                    50 - 200 KG
-                  </p>
+                  <p className="text-xs text-[#648770] font-black uppercase">50 - 200 KG</p>
                   <p className="text-lg font-black text-[#1db954]">AED 10.75</p>
                 </div>
 
                 <div className="text-center p-4 border-l border-[#d7e3dc]">
-                  <p className="text-xs text-[#648770] font-black uppercase">
-                    200 - 500 KG
-                  </p>
+                  <p className="text-xs text-[#648770] font-black uppercase">200 - 500 KG</p>
                   <p className="text-lg font-black text-[#1db954]">AED 10.00</p>
                 </div>
 
                 <div className="text-center p-4 border-l border-[#d7e3dc]">
-                  <p className="text-xs text-[#648770] font-black uppercase">
-                    500+ KG
-                  </p>
+                  <p className="text-xs text-[#648770] font-black uppercase">500+ KG</p>
                   <p className="text-lg font-black text-[#1db954]">Custom</p>
                 </div>
               </div>

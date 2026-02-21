@@ -1,6 +1,8 @@
 import CategoryClient from "@/components/CategoryClient";
 import { getProductsByCategory } from "@/lib/productsDb";
 
+export const revalidate = 60;
+
 const ALLOWED = ["vegetables", "fruits", "spices", "nuts", "eggs", "oils"] as const;
 type DbCategory = (typeof ALLOWED)[number];
 

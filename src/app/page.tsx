@@ -1,7 +1,7 @@
-"use client";
-
 import CategoryRow from "@/components/CategoryRow";
 import Link from "next/link";
+
+export const revalidate = 300; // ✅ cache homepage for 5 minutes (fast)
 
 export default function Home() {
   return (
@@ -66,66 +66,65 @@ export default function Home() {
                 Browse all →
               </Link>
             </div>
-<CategoryRow
-  items={[
-    {
-      key: "vegetables",
-      title: "Vegetables",
-      subtitle: "",
-      href: "/products/vegetables",
-      img: "https://images.unsplash.com/photo-1540420773420-3366772f4999?auto=format&fit=crop&w=1400&q=80",
-      fallbackImg:
-        "https://images.unsplash.com/photo-1542838132-92c53300491e?auto=format&fit=crop&w=1400&q=80",
-    },
-    {
-  key: "fruits",
-  title: "Fruits",
-  subtitle: "",
-  href: "/products/fruits",
-  img: "https://images.unsplash.com/photo-1519996529931-28324d5a630e?auto=format&fit=crop&w=1400&q=80",
-  fallbackImg:
-    "https://images.unsplash.com/photo-1573246123716-6b1782bfc499?auto=format&fit=crop&w=1400&q=80",
-},
-    {
-      key: "spices",
-      title: "Spices",
-      subtitle: "",
-      href: "/products/spices",
-      img: "https://images.unsplash.com/photo-1596040033229-a9821ebd058d?auto=format&fit=crop&w=1400&q=80",
-      fallbackImg:
-        "https://images.unsplash.com/photo-1615485737651-580c9159c89a?auto=format&fit=crop&w=1400&q=80",
-    },
-{
-  key: "nuts",
-  title: "Nuts",
-  subtitle: "",
-  href: "/products/nuts",
-  // mixed nuts + raisins (dry fruits mix)
-  img: "https://images.unsplash.com/photo-1633168850968-76be3bb0a2fc?auto=format&fit=crop&w=1400&q=80",
-  // clean nuts bowl fallback
-  fallbackImg: "https://images.unsplash.com/photo-1603046891288-5ae31f3e1dae?auto=format&fit=crop&w=1400&q=80",
-},
 
-    {
-      key: "eggs",
-      title: "Eggs",
-      subtitle: "",
-      href: "/products/eggs",
-      img: "https://images.unsplash.com/photo-1587486913049-53fc88980cfc?auto=format&fit=crop&w=1400&q=80",
-      fallbackImg:
-        "https://images.unsplash.com/photo-1587486913049-53fc88980cfc?auto=format&fit=crop&w=1400&q=80",
-    },
-    {
-      key: "oils",
-      title: "Oils",
-      subtitle: "",
-      href: "/products/oils",
-      img: "https://images.unsplash.com/photo-1474979266404-7eaacbcd87c5?auto=format&fit=crop&w=1400&q=80",
-      fallbackImg:
-        "https://images.unsplash.com/photo-1514996937319-344454492b37?auto=format&fit=crop&w=1400&q=80",
-    },
-  ]}
-/>
+            <CategoryRow
+              items={[
+                {
+                  key: "vegetables",
+                  title: "Vegetables",
+                  subtitle: "",
+                  href: "/products/vegetables",
+                  img: "https://images.unsplash.com/photo-1540420773420-3366772f4999?auto=format&fit=crop&w=1400&q=80",
+                  fallbackImg:
+                    "https://images.unsplash.com/photo-1542838132-92c53300491e?auto=format&fit=crop&w=1400&q=80",
+                },
+                {
+                  key: "fruits",
+                  title: "Fruits",
+                  subtitle: "",
+                  href: "/products/fruits",
+                  img: "https://images.unsplash.com/photo-1519996529931-28324d5a630e?auto=format&fit=crop&w=1400&q=80",
+                  fallbackImg:
+                    "https://images.unsplash.com/photo-1573246123716-6b1782bfc499?auto=format&fit=crop&w=1400&q=80",
+                },
+                {
+                  key: "spices",
+                  title: "Spices",
+                  subtitle: "",
+                  href: "/products/spices",
+                  img: "https://images.unsplash.com/photo-1596040033229-a9821ebd058d?auto=format&fit=crop&w=1400&q=80",
+                  fallbackImg:
+                    "https://images.unsplash.com/photo-1615485737651-580c9159c89a?auto=format&fit=crop&w=1400&q=80",
+                },
+                {
+                  key: "nuts",
+                  title: "Nuts",
+                  subtitle: "",
+                  href: "/products/nuts",
+                  img: "https://images.unsplash.com/photo-1633168850968-76be3bb0a2fc?auto=format&fit=crop&w=1400&q=80",
+                  fallbackImg:
+                    "https://images.unsplash.com/photo-1603046891288-5ae31f3e1dae?auto=format&fit=crop&w=1400&q=80",
+                },
+                {
+                  key: "eggs",
+                  title: "Eggs",
+                  subtitle: "",
+                  href: "/products/eggs",
+                  img: "https://images.unsplash.com/photo-1587486913049-53fc88980cfc?auto=format&fit=crop&w=1400&q=80",
+                  fallbackImg:
+                    "https://images.unsplash.com/photo-1587486913049-53fc88980cfc?auto=format&fit=crop&w=1400&q=80",
+                },
+                {
+                  key: "oils",
+                  title: "Oils",
+                  subtitle: "",
+                  href: "/products/oils",
+                  img: "https://images.unsplash.com/photo-1474979266404-7eaacbcd87c5?auto=format&fit=crop&w=1400&q=80",
+                  fallbackImg:
+                    "https://images.unsplash.com/photo-1514996937319-344454492b37?auto=format&fit=crop&w=1400&q=80",
+                },
+              ]}
+            />
 
             <p className="text-[#648770] text-sm font-medium mt-3 px-2">
               Click arrows to explore all categories →
@@ -134,47 +133,44 @@ export default function Home() {
         </section>
 
         {/* SERVICES */}
-     <section className="bg-white py-20">
-  <div className="max-w-[1400px] mx-auto px-6 lg:px-20">
-    <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 items-start">
-      {/* LEFT: Title */}
-      <div className="lg:col-span-4">
-        <h2 className="text-6xl font-black text-[#0B5D1E] leading-[1]">
-          Our Services
-        </h2>
-      </div>
+        <section className="bg-white py-20">
+          <div className="max-w-[1400px] mx-auto px-6 lg:px-20">
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 items-start">
+              <div className="lg:col-span-4">
+                <h2 className="text-6xl font-black text-[#0B5D1E] leading-[1]">
+                  Our Services
+                </h2>
+              </div>
 
-      {/* RIGHT: Content */}
-      <div className="lg:col-span-8">
-        <p className="text-[#648770] text-xl font-medium leading-relaxed max-w-3xl">
-         MyVegmarket supports UAE groceries, restaurants, and wholesalers with clear market visibility — and helps exporters 
-         plan smarter shipments with real wholesale signals from Dubai markets.Track category-wise movement, 
-         compare rates, and make confident buying or export decisions backed by daily pricing intelligence.
-        </p>
+              <div className="lg:col-span-8">
+                <p className="text-[#648770] text-xl font-medium leading-relaxed max-w-3xl">
+                  MyVegmarket supports UAE groceries, restaurants, and wholesalers with clear market visibility — and helps exporters
+                  plan smarter shipments with real wholesale signals from Dubai markets.Track category-wise movement,
+                  compare rates, and make confident buying or export decisions backed by daily pricing intelligence.
+                </p>
 
-        <p className="text-[#648770] text-lg font-medium leading-relaxed max-w-3xl mt-5">
-         For exporters, this means better timing and better margins: understand demand shifts, spot price momentum early,
-         and plan packing and container dispatch for profitable export. For UAE businesses, it means predictable 
-         procurement — consistent sourcing, better negotiation, and smoother season-wide supply planning.
-        </p>
+                <p className="text-[#648770] text-lg font-medium leading-relaxed max-w-3xl mt-5">
+                  For exporters, this means better timing and better margins: understand demand shifts, spot price momentum early,
+                  and plan packing and container dispatch for profitable export. For UAE businesses, it means predictable
+                  procurement — consistent sourcing, better negotiation, and smoother season-wide supply planning.
+                </p>
 
-        <p className="text-[#6f8f7c] text-base font-semibold mt-6">
-          Built for exporters • wholesalers • supermarkets • hotels • cloud kitchens • caterers
-        </p>
+                <p className="text-[#6f8f7c] text-base font-semibold mt-6">
+                  Built for exporters • wholesalers • supermarkets • hotels • cloud kitchens • caterers
+                </p>
 
-        {/* Button aligned with paragraph (right column) */}
-        <div className="mt-10">
-          <Link
-            href="/services"
-            className="inline-flex items-center justify-center bg-[#1db954] text-white font-extrabold text-sm h-12 px-10 rounded-full hover:opacity-95 transition-opacity"
-          >
-            View Services
-          </Link>
-        </div>
-      </div>
-    </div>
-  </div>
-</section>
+                <div className="mt-10">
+                  <Link
+                    href="/services"
+                    className="inline-flex items-center justify-center bg-[#1db954] text-white font-extrabold text-sm h-12 px-10 rounded-full hover:opacity-95 transition-opacity"
+                  >
+                    View Services
+                  </Link>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
 
         {/* CTA SUBSCRIBE */}
         <section className="px-6 lg:px-20 py-24">
@@ -182,8 +178,7 @@ export default function Home() {
             <div
               className="absolute top-0 right-0 w-1/3 h-full opacity-10 pointer-events-none"
               style={{
-                backgroundImage:
-                  "radial-gradient(circle, #C8A951 1px, transparent 1px)",
+                backgroundImage: "radial-gradient(circle, #C8A951 1px, transparent 1px)",
                 backgroundSize: "24px 24px",
               }}
             />

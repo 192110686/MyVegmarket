@@ -1,7 +1,10 @@
 import ProductDetailClient from "@/components/ProductDetailClient";
 import { getProductBySlug } from "@/lib/productsDb";
 import { notFound } from "next/navigation";
-export const dynamic = "force-dynamic";
+
+// ✅ CHANGE ONLY THIS LINE:
+// export const dynamic = "force-dynamic";
+export const revalidate = 60;
 
 export default async function Page({
   params,
