@@ -415,7 +415,9 @@ export default function ExporterVerifyPage() {
                 value={authEmail}
                 onChange={(e) => setAuthEmail(e.target.value)}
                 placeholder="name@company.com"
-                className="mt-2 w-full rounded-[22px] border border-[#e0e8e3] px-5 py-4 outline-none font-semibold"
+                className="mt-2 w-full rounded-[22px] border border-[#e0e8e3] bg-white px-5 py-4
+           text-[#111713] placeholder:text-[#9bb1a6] caret-[#111713]
+           outline-none font-semibold focus:ring-2 focus:ring-[#1db954]/20"
               />
             </div>
 
@@ -426,7 +428,9 @@ export default function ExporterVerifyPage() {
                 onChange={(e) => setAuthPassword(e.target.value)}
                 placeholder="Minimum 6 characters"
                 type="password"
-                className="mt-2 w-full rounded-[22px] border border-[#e0e8e3] px-5 py-4 outline-none font-semibold"
+                className="mt-2 w-full rounded-[22px] border border-[#e0e8e3] bg-white px-5 py-4
+           text-[#111713] placeholder:text-[#9bb1a6] caret-[#111713]
+           outline-none font-semibold focus:ring-2 focus:ring-[#1db954]/20"
               />
             </div>
 
@@ -590,7 +594,9 @@ function Field({
       <input
         value={value}
         onChange={(e) => setValue(e.target.value)}
-        className="mt-2 w-full rounded-[22px] border border-[#e0e8e3] px-5 py-4 outline-none font-semibold"
+        className="mt-2 w-full rounded-[22px] border border-[#e0e8e3] bg-white px-5 py-4
+           text-[#111713] placeholder:text-[#9bb1a6] caret-[#111713]
+           outline-none font-semibold focus:ring-2 focus:ring-[#1db954]/20"
       />
     </label>
   );
