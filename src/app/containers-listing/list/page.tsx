@@ -465,11 +465,13 @@ export default function ExporterVerifyPage() {
     <main className="min-h-screen bg-[#f6f8f7] px-4 sm:px-6 lg:px-12 pt-8 pb-20">
       <div className="max-w-[1100px] mx-auto">
         <div className="flex items-center justify-between">
-         <Link
+     <Link
   href="/"
-  className="w-11 h-11 rounded-full bg-white border border-[#e0e8e3] flex items-center justify-center font-black"
+  aria-label="Back to home"
+  className="w-11 h-11 rounded-full bg-white border border-[#e0e8e3]
+             flex items-center justify-center shadow-sm hover:shadow-md transition"
 >
-  ←
+  <span className="text-[#111713] text-xl font-black leading-none">←</span>
 </Link>
 
           <button
