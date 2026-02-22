@@ -3,7 +3,8 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import ProductTrendTVChart, { type TVPoint } from "./ProductTrendTVChart";
 
-type RangeKey = "1D" | "10D" | "1W" | "1M" | "3M" | "6M" | "1Y" | "MAX";
+// ✅ Use the EXACT same RangeKey type as ProductTrendTVChart expects (prevents “two RangeKey types” error)
+type RangeKey = React.ComponentProps<typeof ProductTrendTVChart>["range"];
 
 type TrendPoint = {
   time: string;
@@ -97,9 +98,7 @@ export default function PriceTrendModal({
         {/* Header */}
         <div className="flex items-start justify-between gap-4 px-4 sm:px-6 py-4 border-b border-[#eef3ef]">
           <div className="min-w-0">
-            <h2 className="text-base sm:text-lg font-black text-[#111713] truncate">
-              {title}
-            </h2>
+            <h2 className="text-base sm:text-lg font-black text-[#111713] truncate">{title}</h2>
             <p className="text-xs sm:text-sm text-[#648770] font-medium">
               MyVegMarket vs Market price trend
             </p>
@@ -117,24 +116,22 @@ export default function PriceTrendModal({
 
         {/* Controls */}
         <div className="px-4 sm:px-6 pt-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-          {/* ✅ Mobile: horizontal scroll chips (no wrapping) */}
+          {/* ✅ Removed 10D completely */}
           <div className="flex gap-2 overflow-x-auto scrollbar-hide pb-1 -mx-1 px-1">
-            {(["1D", "10D", "1W", "1M", "3M", "6M", "1Y", "MAX"] as RangeKey[]).map(
-              (k) => (
-                <button
-                  key={k}
-                  onClick={() => setRange(k)}
-                  className={[
-                    "shrink-0 px-4 py-2 rounded-full text-sm font-black border transition",
-                    range === k
-                      ? "bg-[#1db954] text-white border-[#1db954]"
-                      : "bg-white text-[#111713] border-[#e0e8e3] hover:bg-[#f6f8f7]",
-                  ].join(" ")}
-                >
-                  {k}
-                </button>
-              )
-            )}
+            {(["1D", "1W", "1M", "3M", "6M", "1Y", "MAX"] as RangeKey[]).map((k) => (
+              <button
+                key={k}
+                onClick={() => setRange(k)}
+                className={[
+                  "shrink-0 px-4 py-2 rounded-full text-sm font-black border transition",
+                  range === k
+                    ? "bg-[#1db954] text-white border-[#1db954]"
+                    : "bg-white text-[#111713] border-[#e0e8e3] hover:bg-[#f6f8f7]",
+                ].join(" ")}
+              >
+                {k}
+              </button>
+            ))}
           </div>
 
           {/* Avg pill */}
