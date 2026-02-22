@@ -39,7 +39,7 @@ type RowVM = {
   slug: string;
   name: string;
   category: ProductCategory;
-  unit: string;
+  unit: string; // kept for search compatibility
   origin: string;
   packaging?: string | null;
 
@@ -171,7 +171,7 @@ export default function AlAweerPricesClient({
         slug: p.slug,
         name: p.name,
         category: p.category,
-        unit: p.unit,
+        unit: p.unit, // kept for search compatibility
         origin: (p.origin_country || "—").trim() || "—",
         packaging: p.packaging,
         minPrice: agg.min,
@@ -206,9 +206,6 @@ export default function AlAweerPricesClient({
     return filtered;
   }, [products, aggBySlug, selectedCats, search, showOriginFilter, origin]);
 
-  // ✅ FAST behavior:
-  // - Desktop/tablet: direct download (no share dialog)
-  // - Phone: share sheet (if supported), else download
   const handleDownloadPdf = async () => {
     const qs = new URLSearchParams({
       search,
@@ -221,13 +218,11 @@ export default function AlAweerPricesClient({
     const filename = "myvegmarket-al-aweer-price-report.pdf";
 
     try {
-      // Prefer getting the file and downloading directly (works everywhere)
       const res = await fetch(url, { method: "GET" });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
 
       const blob = await res.blob();
 
-      // Phone-only share
       if (isPhoneDevice()) {
         try {
           const file = new File([blob], filename, { type: "application/pdf" });
@@ -241,15 +236,11 @@ export default function AlAweerPricesClient({
             });
             return;
           }
-        } catch {
-          // fall back to download
-        }
+        } catch {}
       }
 
-      // Desktop/tablet OR phone fallback → download
       downloadBlob(blob, filename);
     } catch {
-      // last resort
       window.open(url, "_blank", "noopener,noreferrer");
     }
   };
@@ -423,12 +414,11 @@ export default function AlAweerPricesClient({
           </div>
         </div>
 
-        {/* DESKTOP */}
+        {/* DESKTOP (Unit column removed) */}
         <div className="hidden md:block bg-white border border-[#e0e8e3] rounded-2xl overflow-hidden shadow-sm">
-          <div className="grid grid-cols-[3fr_1.5fr_1fr_1fr_1fr_1.2fr_1fr] gap-0 bg-green-600 text-white text-sm font-semibold">
+          <div className="grid grid-cols-[3fr_1.5fr_1fr_1fr_1.2fr_1fr] gap-0 bg-green-600 text-white text-sm font-semibold">
             <div className="px-5 py-3">Product</div>
             <div className="px-5 py-3">Origin</div>
-            <div className="px-5 py-3">Unit</div>
             <div className="px-5 py-3 text-right">MIN</div>
             <div className="px-5 py-3 text-right">MAX</div>
             <div className="px-5 py-3 text-right">Market (AED)</div>
@@ -444,7 +434,7 @@ export default function AlAweerPricesClient({
               onKeyDown={(e) => {
                 if (e.key === "Enter" || e.key === " ") openProduct(p.slug);
               }}
-              className={`grid grid-cols-[3fr_1.5fr_1fr_1fr_1fr_1.2fr_1fr] gap-0 text-sm cursor-pointer transition-colors
+              className={`grid grid-cols-[3fr_1.5fr_1fr_1fr_1.2fr_1fr] gap-0 text-sm cursor-pointer transition-colors
                 ${idx % 2 === 0 ? "bg-white" : "bg-[#f6f8f7]"}
                 hover:bg-[#eaf3ee] focus:outline-none focus:ring-2 focus:ring-[#0B5D1E]/15`}
             >
@@ -470,7 +460,7 @@ export default function AlAweerPricesClient({
           ))}
         </div>
 
-        {/* MOBILE */}
+        {/* MOBILE (unit removed from subtitle) */}
         <div className="md:hidden space-y-3">
           {rows.map((p) => (
             <div
@@ -487,9 +477,7 @@ export default function AlAweerPricesClient({
               <div className="flex items-start justify-between gap-3">
                 <div className="min-w-0">
                   <div className="font-extrabold text-[#111713] leading-tight">{p.name}</div>
-                  <div className="mt-1 text-sm font-semibold text-[#648770]">
-                    {p.origin} • {p.unit}
-                  </div>
+                  <div className="mt-1 text-sm font-semibold text-[#648770]">{p.origin}</div>
                   <div className="mt-2 text-xs font-semibold text-[#648770]">
                     MIN:{" "}
                     <span className="text-[#111713] font-extrabold tabular-nums">
