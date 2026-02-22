@@ -450,7 +450,6 @@ export default function AlAweerPricesClient({
             >
               <div className="px-5 py-3 font-semibold text-[#111713]">{p.name}</div>
               <div className="px-5 py-3 text-[#111713]">{p.origin}</div>
-              <div className="px-5 py-3 text-[#111713]">{p.unit}</div>
 
               <div className="px-5 py-3 text-right font-extrabold tabular-nums text-[#111713]">
                 {formatPrice(p.minPrice)}

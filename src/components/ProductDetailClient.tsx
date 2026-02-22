@@ -556,13 +556,6 @@ export default function ProductDetailClient({
                     {formatPackaging((product as any).packaging)}
                   </p>
                 </div>
-
-                <div className="bg-white border border-[#e0e8e3] rounded-2xl p-4 shadow-sm">
-                  <p className="text-[11px] font-black uppercase tracking-wider text-[#648770] mb-1">
-                    Freshness
-                  </p>
-                  <p className="font-black text-[#111713]">Fresh stock (subject to availability)</p>
-                </div>
               </div>
 
               {/* About */}
