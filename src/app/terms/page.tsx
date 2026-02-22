@@ -11,9 +11,9 @@ export default function TermsPage() {
 
         <div className="mt-8 space-y-6 text-[#111713]">
           <section>
-            <h2 className="text-xl font-black">1) About MyVegMarket</h2>
+            <h2 className="text-xl font-black">1) About MyVegmarket</h2>
             <p className="mt-2 text-[#648770] font-medium leading-7">
-              MyVegMarket provides market-reference information (including approved Al Aweer
+              MyVegmarket provides market-reference information (including approved Al Aweer
               reference rates) and supports bulk sourcing enquiries for UAE businesses and exporters.
             </p>
           </section>
@@ -22,7 +22,7 @@ export default function TermsPage() {
             <h2 className="text-xl font-black">2) Reference Rates Disclaimer</h2>
             <p className="mt-2 text-[#648770] font-medium leading-7">
               Prices shown are reference rates and may vary by quality, grade, packaging, timing,
-              supplier availability, and delivery conditions. MyVegMarket does not guarantee that
+              supplier availability, and delivery conditions. MyVegmarket does not guarantee that
               displayed rates will match final transaction prices.
             </p>
           </section>
@@ -30,7 +30,7 @@ export default function TermsPage() {
           <section>
             <h2 className="text-xl font-black">3) Orders & Quotes</h2>
             <p className="mt-2 text-[#648770] font-medium leading-7">
-              Any quote provided through MyVegMarket is subject to confirmation, availability,
+              Any quote provided through MyVegmarket is subject to confirmation, availability,
               quality checks, and logistics. Final pricing may include delivery and service charges
               depending on requirements.
             </p>
@@ -47,7 +47,7 @@ export default function TermsPage() {
           <section>
             <h2 className="text-xl font-black">5) Limitation of Liability</h2>
             <p className="mt-2 text-[#648770] font-medium leading-7">
-              MyVegMarket is not liable for indirect or consequential losses resulting from use of
+              MyVegmarket is not liable for indirect or consequential losses resulting from use of
               reference information, delays, market changes, or third-party supplier actions.
             </p>
           </section>

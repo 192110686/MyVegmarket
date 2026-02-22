@@ -152,17 +152,10 @@ export default function Home() {
 
               <div className="lg:col-span-8">
                 <p className="text-[#648770] text-base sm:text-lg lg:text-xl font-medium leading-relaxed max-w-3xl">
-                  MyVegmarket supports UAE groceries, restaurants, and wholesalers with clear market visibility — and helps exporters
-                  plan smarter shipments with real wholesale signals from UAE markets. Track category-wise movement,
-                  compare rates, and make confident buying or export decisions backed by daily pricing intelligence.
+               MyVegMarket helps UAE buyers and sellers stay updated with daily wholesale market rates and real container availability. 
+               Compare prices across categories, spot changes early, and plan your purchase or sale with confidence. 
+               Post your container listing to reach the right buyers, and browse available containers to source faster.
                 </p>
-
-                <p className="text-[#648770] text-sm sm:text-base lg:text-lg font-medium leading-relaxed max-w-3xl mt-4 sm:mt-5">
-                  For exporters, this means better timing and better margins: understand demand shifts, spot price momentum early,
-                  and plan packing and container dispatch for profitable export. For UAE businesses, it means predictable
-                  procurement — consistent sourcing, better negotiation, and smoother season-wide supply planning.
-                </p>
-
                 <p className="text-[#6f8f7c] text-sm sm:text-base font-semibold mt-5 sm:mt-6">
                   Built for exporters • wholesalers • supermarkets • hotels • cloud kitchens • caterers
                 </p>

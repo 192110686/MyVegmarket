@@ -3,8 +3,8 @@ import Link from "next/link";
 export default function BulkSupplyPage() {
   const features = [
     {
-      title: "Al Aweer Reference Rates",
-      desc: "View approved daily market reference rates and category-wise movement.",
+      title: "Al Aweer Daily Rates",
+      desc: "Latest market prices with update time and price range per product.",
       icon: "query_stats",
     },
     {
