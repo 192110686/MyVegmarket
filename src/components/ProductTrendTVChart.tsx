@@ -12,7 +12,7 @@ import {
 
 export type TVPoint = { time: string; value: number }; // "YYYY-MM-DD"
 
-type RangeKey = "1D" | "10D" | "1W" | "1M" | "3M" | "6M" | "1Y" | "MAX";
+type RangeKey = "1D" | "1W" | "1M" | "3M" | "6M" | "1Y" | "MAX";
 type ViewMode = "MY" | "MARKET" | "COMPARE";
 
 type Props = {
@@ -24,10 +24,142 @@ type Props = {
   onAvgTextChange?: (text: string) => void;
 };
 
+/** ---------- small helpers ---------- */
 function clamp(n: number, min: number, max: number) {
   return Math.max(min, Math.min(max, n));
 }
 
+function parseBusinessDay(yyyy_mm_dd: string): BusinessDay {
+  const [y, m, d] = yyyy_mm_dd.split("-").map(Number);
+  return { year: y, month: m, day: d };
+}
+
+function toISODate(dt: Date) {
+  const yyyy = dt.getFullYear();
+  const mm = String(dt.getMonth() + 1).padStart(2, "0");
+  const dd = String(dt.getDate()).padStart(2, "0");
+  return `${yyyy}-${mm}-${dd}`;
+}
+
+function addDays(dateStr: string, days: number): string {
+  const [y, m, d] = dateStr.split("-").map(Number);
+  const dt = new Date(y, m - 1, d);
+  dt.setDate(dt.getDate() + days);
+  return toISODate(dt);
+}
+
+function addMonths(dateStr: string, months: number): string {
+  const [y, m, d] = dateStr.split("-").map(Number);
+  const dt = new Date(y, m - 1, d);
+  dt.setMonth(dt.getMonth() + months);
+  // normalize to 1st day for month points
+  return toISODate(new Date(dt.getFullYear(), dt.getMonth(), 1));
+}
+
+function startOfDayISO(dateStr: string) {
+  // already YYYY-MM-DD, keep as is
+  return dateStr.slice(0, 10);
+}
+
+function startOfMonthISO(dateStr: string) {
+  const [y, m] = dateStr.slice(0, 7).split("-").map(Number);
+  return `${y}-${String(m).padStart(2, "0")}-01`;
+}
+
+function sortByTime(series: TVPoint[]) {
+  return [...(series ?? [])].sort((a, b) => a.time.localeCompare(b.time));
+}
+
+function rangeToDays(r: RangeKey) {
+  switch (r) {
+    case "1D":
+      return 1;
+    case "1W":
+      return 7;
+    case "1M":
+      return 30;
+    default:
+      return 30;
+  }
+}
+
+function rangeToMonths(r: RangeKey) {
+  switch (r) {
+    case "3M":
+      return 3;
+    case "6M":
+      return 6;
+    case "1Y":
+      return 12;
+    default:
+      return 0;
+  }
+}
+
+/** ---------- build series for the selected range ---------- */
+/**
+ * ✅ Daily ranges -> daily points (fills missing days using carry-forward)
+ * ✅ Monthly ranges -> 1 point per month (latest value in that month)
+ *
+ * IMPORTANT: For monthly ranges, we keep ALL months available (so dragging left/right works)
+ */
+function normalizeForRange(range: RangeKey, raw: TVPoint[]): TVPoint[] {
+  const s = sortByTime(raw);
+  if (!s.length) return [];
+
+  const isDaily = range === "1D" || range === "1W" || range === "1M";
+
+  if (isDaily) {
+    // Map latest value per day
+    const dayMap = new Map<string, number>();
+    for (const p of s) dayMap.set(startOfDayISO(p.time), p.value);
+
+    const first = startOfDayISO(s[0].time);
+    const last = startOfDayISO(s[s.length - 1].time);
+
+    // fill every day from first..last
+    const out: TVPoint[] = [];
+    let cur = first;
+    let carry = dayMap.get(first) ?? s[0].value;
+
+    // guard to avoid infinite loops
+    for (let i = 0; i < 5000; i++) {
+      const v = dayMap.get(cur);
+      if (typeof v === "number") carry = v;
+      out.push({ time: cur, value: carry });
+      if (cur === last) break;
+      cur = addDays(cur, 1);
+    }
+    return out;
+  }
+
+  // Monthly (3M/6M/1Y/MAX) -> latest point per month
+  const monthMap = new Map<string, TVPoint>(); // monthStart -> latest point
+  for (const p of s) {
+    const m0 = startOfMonthISO(p.time);
+    const prev = monthMap.get(m0);
+    if (!prev || prev.time < p.time) monthMap.set(m0, { time: m0, value: p.value });
+  }
+
+  // build continuous months from first month..last month so panning is smooth
+  const firstMonth = startOfMonthISO(s[0].time);
+  const lastMonth = startOfMonthISO(s[s.length - 1].time);
+
+  const out: TVPoint[] = [];
+  let cur = firstMonth;
+  let carry = monthMap.get(cur)?.value ?? s[0].value;
+
+  for (let i = 0; i < 240; i++) {
+    const got = monthMap.get(cur);
+    if (got) carry = got.value;
+    out.push({ time: cur, value: carry });
+    if (cur === lastMonth) break;
+    cur = addMonths(cur, 1);
+  }
+  return out;
+}
+
+/** ---------- percentage mode ---------- */
 function toPct(data: TVPoint[]) {
   if (!data.length) return data;
   const base = data[0].value || 1;
@@ -37,45 +169,7 @@ function toPct(data: TVPoint[]) {
   }));
 }
 
-function parseBusinessDay(yyyy_mm_dd: string): BusinessDay {
-  const [y, m, d] = yyyy_mm_dd.split("-").map(Number);
-  return { year: y, month: m, day: d };
-}
-
-function addDays(dateStr: string, days: number): string {
-  const [y, m, d] = dateStr.split("-").map(Number);
-  const dt = new Date(y, m - 1, d);
-  dt.setDate(dt.getDate() + days);
-  const yyyy = dt.getFullYear();
-  const mm = String(dt.getMonth() + 1).padStart(2, "0");
-  const dd = String(dt.getDate()).padStart(2, "0");
-  return `${yyyy}-${mm}-${dd}`;
-}
-
-function rangeToDays(r: RangeKey) {
-  switch (r) {
-    case "1D":
-      return 1;
-    case "10D":
-      return 10;
-    case "1W":
-      return 7;
-    case "1M":
-      return 30;
-    case "3M":
-      return 90;
-    case "6M":
-      return 180;
-    case "1Y":
-      return 365;
-    case "MAX":
-      return 0;
-    default:
-      return 30;
-  }
-}
-
-/** ✅ Fast precompute so avg calc is O(log n) instead of looping whole array every pixel */
+/** ---------- avg calc helpers ---------- */
 function buildIndex(series: TVPoint[]) {
   const t: number[] = [];
   const ps: number[] = [0];
@@ -144,6 +238,57 @@ function avgInRange(index: { t: number[]; ps: number[] }, from: any, to: any): n
   return sum / count;
 }
 
+function formatAED(v: number) {
+  if (!Number.isFinite(v)) return "-";
+  return `AED ${v.toFixed(2)}`;
+}
+
+function formatPct(v: number) {
+  if (!Number.isFinite(v)) return "-";
+  const sign = v > 0 ? "+" : "";
+  return `${sign}${v.toFixed(2)}%`;
+}
+
+function formatTimePill(t: any) {
+  if (!t) return "";
+  if (typeof t === "object" && "year" in t && "month" in t && "day" in t) {
+    const d = new Date(t.year, t.month - 1, t.day);
+    return d.toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" });
+  }
+  if (typeof t === "number") {
+    const d = new Date(t * 1000);
+    return d.toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" });
+  }
+  if (typeof t === "string") return t;
+  return String(t);
+}
+
+function timeToDate(time: any): Date {
+  if (typeof time === "number") return new Date(time * 1000);
+  if (typeof time === "string") return new Date(time);
+  return new Date(time.year, (time.month ?? 1) - 1, time.day ?? 1);
+}
+
+/** ✅ Make labels never look “empty”: give each tick enough pixels */
+function pxPerPoint(range: RangeKey) {
+  if (range === "1W") return 90; // Mon Tue Wed...
+  if (range === "1M") return 40; // 1..30
+  if (range === "3M") return 140;
+  if (range === "6M") return 110;
+  if (range === "1Y") return 90;
+  return 55; // MAX
+}
+
+function visiblePointCount(range: RangeKey) {
+  if (range === "1D") return 1;
+  if (range === "1W") return 7;
+  if (range === "1M") return 30;
+  if (range === "3M") return 3;
+  if (range === "6M") return 6;
+  if (range === "1Y") return 12;
+  return 24; // MAX default visible
+}
+
 export default function ProductTrendTVChart({
   title,
   myveg,
@@ -162,11 +307,16 @@ export default function ProductTrendTVChart({
   const topLabelRef = useRef<HTMLDivElement | null>(null);
   const bottomTimeRef = useRef<HTMLDivElement | null>(null);
 
-  const [view, setView] = useState<ViewMode>("COMPARE");
+  const hasMy = (myveg ?? []).length > 0;
+  const hasMk = (market ?? []).length > 0;
+  const defaultView: ViewMode = hasMy && hasMk ? "COMPARE" : hasMk ? "MARKET" : "MY";
+
+  const [view, setView] = useState<ViewMode>(defaultView);
   const [mode, setMode] = useState<"ABS" | "PCT">("ABS");
 
-  const myAbs = useMemo(() => myveg ?? [], [myveg]);
-  const mkAbs = useMemo(() => market ?? [], [market]);
+  /** ✅ 1) Normalize raw data to DAILY or MONTHLY based on range */
+  const myAbs = useMemo(() => normalizeForRange(range, myveg ?? []), [range, myveg]);
+  const mkAbs = useMemo(() => normalizeForRange(range, market ?? []), [range, market]);
 
   const mySeries = useMemo(() => (mode === "PCT" ? toPct(myAbs) : myAbs), [mode, myAbs]);
   const mkSeries = useMemo(() => (mode === "PCT" ? toPct(mkAbs) : mkAbs), [mode, mkAbs]);
@@ -177,6 +327,9 @@ export default function ProductTrendTVChart({
   const lastAvgTextRef = useRef<string>("");
   const rafRef = useRef<number | null>(null);
 
+  /** ✅ chart width so ALL labels are visible, and wrapper becomes scrollable */
+  const [chartWidth, setChartWidth] = useState<number | null>(null);
+
   const pushAvgText = () => {
     const chart = chartRef.current;
     if (!chart) return;
@@ -184,19 +337,17 @@ export default function ProductTrendTVChart({
     const vr = chart.timeScale().getVisibleRange();
     if (!vr) return;
 
-    const prefix = mode === "PCT" ? "Avg (Price):" : "Avg:";
-
     const parts: string[] = [];
-    if (view !== "MARKET") {
+    if (view !== "MARKET" && myAbs.length) {
       const a = avgInRange(myIdx, vr.from, vr.to);
-      parts.push(`MyVeg ${prefix} ${a == null ? "-" : `AED ${a.toFixed(2)}`}`);
+      parts.push(`MyVeg Avg: ${a == null ? "-" : formatAED(a)}`);
     }
-    if (view !== "MY") {
+    if (view !== "MY" && mkAbs.length) {
       const a = avgInRange(mkIdx, vr.from, vr.to);
-      parts.push(`Market ${prefix} ${a == null ? "-" : `AED ${a.toFixed(2)}`}`);
+      parts.push(`Market Avg: ${a == null ? "-" : formatAED(a)}`);
     }
 
-    const text = parts.join("  •  ");
+    const text = parts.length ? parts.join("  •  ") : "Avg: -";
     if (text !== lastAvgTextRef.current) {
       lastAvgTextRef.current = text;
       onAvgTextChange?.(text);
@@ -211,7 +362,30 @@ export default function ProductTrendTVChart({
     });
   };
 
-  // Create chart once
+  /** ✅ Dynamic x-axis label format (based on selected range) */
+  const tickFormatter = useMemo(() => {
+    return ((time: any) => {
+      const d = timeToDate(time);
+
+      if (range === "1W") {
+        return d.toLocaleString("en-US", { weekday: "short" }); // Mon Tue...
+      }
+
+      if (range === "1D"  || range === "1M") {
+        return String(d.getDate()); // 1..30/31
+      }
+
+      // 3M/6M/1Y/MAX -> month label
+      const mon = d.toLocaleString("en-US", { month: "short" }); // Jan
+      if (range === "1Y" || range === "MAX") {
+        // show year on Jan for clarity
+        if (d.getMonth() === 0) return `${mon} '${String(d.getFullYear()).slice(-2)}`;
+      }
+      return mon;
+    }) as any;
+  }, [range]);
+
+  /** ✅ Create chart once */
   useEffect(() => {
     if (!containerRef.current || !wrapperRef.current) return;
     if (chartRef.current) return;
@@ -224,16 +398,44 @@ export default function ProductTrendTVChart({
 
       layout: {
         background: { color: "transparent" },
-        textColor: "rgba(17,23,19,0.60)",
+        textColor: "rgba(17,23,19,0.88)",
         attributionLogo: false,
       },
 
       grid: {
-        vertLines: { color: "rgba(0,0,0,0.06)" },
-        horzLines: { color: "rgba(0,0,0,0.06)" },
+        vertLines: { color: "rgba(0,0,0,0.05)" },
+        horzLines: { color: "rgba(0,0,0,0.05)" },
       },
-      rightPriceScale: { borderColor: "rgba(0,0,0,0.10)", ticksVisible: true },
-      timeScale: { borderColor: "rgba(0,0,0,0.10)", timeVisible: true, secondsVisible: false },
+
+      rightPriceScale: {
+        borderColor: "rgba(0,0,0,0.12)",
+        ticksVisible: true,
+      },
+timeScale: {
+  borderColor: "rgba(0,0,0,0.12)",
+  borderVisible: true,
+
+  // ✅ must be on
+  visible: true,
+  ticksVisible: true,
+
+  timeVisible: true,
+  secondsVisible: false,
+
+  // ✅ allow real panning
+  fixLeftEdge: false,
+  fixRightEdge: false,
+  rightOffset: 2,
+
+  // ✅ IMPORTANT: don’t “stick” to right edge when dragging
+  rightBarStaysOnScroll: false,
+
+  // ✅ helps prevent label skipping too aggressively
+  barSpacing: 22,
+  minBarSpacing: 10,
+
+  tickMarkFormatter: tickFormatter,
+} as any,
 
       crosshair: {
         mode: CrosshairMode.Normal,
@@ -241,6 +443,7 @@ export default function ProductTrendTVChart({
         horzLine: { visible: false, labelVisible: false },
       },
 
+      /** ✅ Drag left/right (this is your “horizontal scroll”) */
       handleScroll: {
         pressedMouseMove: true,
         mouseWheel: true,
@@ -248,7 +451,7 @@ export default function ProductTrendTVChart({
         vertTouchDrag: false,
       },
 
-      handleScale: { axisPressedMouseMove: false, mouseWheel: false, pinch: false },
+      handleScale: { axisPressedMouseMove: false, mouseWheel: true, pinch: true },
     });
 
     chartRef.current = chart;
@@ -264,11 +467,11 @@ export default function ProductTrendTVChart({
 
     const onResize = () => {
       if (!chartRef.current || !containerRef.current) return;
+      const parentW = containerRef.current.parentElement?.clientWidth || containerRef.current.clientWidth || 900;
       try {
         // @ts-ignore
-        chartRef.current.resize(containerRef.current.clientWidth || 900, height);
+        chartRef.current.resize(parentW, height);
       } catch {}
-      // keep avg updated after resize
       scheduleAvg();
     };
     window.addEventListener("resize", onResize);
@@ -294,17 +497,24 @@ export default function ProductTrendTVChart({
       const myVal = myS ? (param.seriesData.get(myS) as any)?.value : undefined;
       const mkVal = mkS ? (param.seriesData.get(mkS) as any)?.value : undefined;
 
+      const fmt = (v: any) => {
+        const num = Number(v);
+        if (!Number.isFinite(num)) return "-";
+        return mode === "PCT" ? formatPct(num) : formatAED(num);
+      };
+
       const parts: string[] = [];
-      if (view !== "MARKET") parts.push(`MyVeg: ${myVal ?? "-"}`);
-      if (view !== "MY" && mkS) parts.push(`Market: ${mkVal ?? "-"}`);
+      if (view !== "MARKET" && myAbs.length) parts.push(`MyVeg: ${fmt(myVal)}`);
+      if (view !== "MY" && mkS && mkAbs.length) parts.push(`Market: ${fmt(mkVal)}`);
+
       top.textContent = parts.join("  |  ");
       top.style.opacity = "1";
 
       const wrapRect = wrap.getBoundingClientRect();
-      const pillWidth = 140;
+      const pillWidth = 180;
       const left = clamp(param.point.x - pillWidth / 2, 8, wrapRect.width - pillWidth - 8);
 
-      bottom.textContent = String(param.time);
+      bottom.textContent = formatTimePill(param.time);
       bottom.style.transform = `translateX(${left}px)`;
       bottom.style.opacity = "1";
     });
@@ -326,7 +536,28 @@ export default function ProductTrendTVChart({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [height]);
 
-  // Update series data
+  /** ✅ Apply tick formatter whenever range changes */
+  useEffect(() => {
+    const chart = chartRef.current;
+    if (!chart) return;
+    chart.applyOptions({
+      timeScale: { tickMarkFormatter: tickFormatter } as any,
+    });
+  }, [tickFormatter]);
+
+  /** ✅ Apply AED labels on Y-axis (and % when mode changes) */
+  useEffect(() => {
+    const chart = chartRef.current;
+    if (!chart) return;
+
+    chart.applyOptions({
+      localization: {
+        priceFormatter: (price: number) => (mode === "PCT" ? formatPct(price) : formatAED(price)),
+      },
+    });
+  }, [mode]);
+
+  /** ✅ Update series data */
   useEffect(() => {
     const chart = chartRef.current;
     const myS = myRef.current;
@@ -334,7 +565,7 @@ export default function ProductTrendTVChart({
 
     myS.setData(mySeries as any);
     try {
-      myS.applyOptions({ visible: view !== "MARKET" });
+      myS.applyOptions({ visible: view !== "MARKET" && myAbs.length > 0 });
     } catch {}
 
     const needMarket = view !== "MY" && mkSeries?.length;
@@ -362,13 +593,44 @@ export default function ProductTrendTVChart({
 
     scheduleAvg();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [mySeries, mkSeries, view]);
+  }, [mySeries, mkSeries, view, myAbs.length]);
 
-  // On range change: set initial visible window
+  /**
+   * ✅ IMPORTANT:
+   * 1) Set chart width so ALL labels appear (Mon..Sun / 1..30 / Jan..Dec)
+   * 2) Wrapper will become horizontally scrollable (overflow-x-auto)
+   */
   useEffect(() => {
     const chart = chartRef.current;
-    if (!chart || !mySeries.length) return;
+    const el = containerRef.current;
+    if (!chart || !el) return;
 
+    const parentW = el.parentElement?.clientWidth || el.clientWidth || 900;
+    const count = visiblePointCount(range);
+    const wanted = Math.max(parentW, count * pxPerPoint(range));
+
+    setChartWidth(wanted);
+
+    try {
+      // @ts-ignore
+      chart.resize(wanted, height);
+    } catch {}
+
+    scheduleAvg();
+  }, [range, height]);
+
+  /**
+   * ✅ On range change: show last N days/months, BUT allow dragging left/right across full dataset.
+   * This gives you exactly: Jan visible -> drag right -> Feb -> Mar, etc.
+   */
+  useEffect(() => {
+    const chart = chartRef.current;
+    if (!chart) return;
+
+    const base = mkSeries.length ? mkSeries : mySeries;
+    if (!base.length) return;
+
+    // MAX: show all
     if (range === "MAX") {
       try {
         chart.timeScale().fitContent();
@@ -377,9 +639,31 @@ export default function ProductTrendTVChart({
       return;
     }
 
-    const days = rangeToDays(range);
-    const last = mySeries[mySeries.length - 1].time;
-    const first = addDays(last, -(days - 1));
+    // Daily ranges
+    if (range === "1D" || range === "1W" || range === "1M") {
+      const days = rangeToDays(range);
+      const last = base[base.length - 1].time;
+      const first = addDays(last, -(days - 1));
+
+      try {
+        chart.timeScale().setVisibleRange({
+          from: parseBusinessDay(first),
+          to: parseBusinessDay(last),
+        });
+      } catch {
+        try {
+          chart.timeScale().fitContent();
+        } catch {}
+      }
+
+      scheduleAvg();
+      return;
+    }
+
+    // Monthly ranges (3M/6M/1Y)
+    const months = rangeToMonths(range);
+    const last = base[base.length - 1].time; // YYYY-MM-01
+    const first = addMonths(last, -(months - 1)); // month-01
 
     try {
       chart.timeScale().setVisibleRange({
@@ -394,60 +678,60 @@ export default function ProductTrendTVChart({
 
     scheduleAvg();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [range, mySeries]);
+}, [range, mySeries.length, mkSeries.length]);
 
   useEffect(() => {
     scheduleAvg();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [mode, view]);
 
+  const showViewControls = hasMy && hasMk;
+
   return (
     <div className="h-full w-full flex flex-col min-w-0">
-      {/* ✅ Header + controls (premium responsive) */}
       <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between mb-3 min-w-0">
         <div className="min-w-0">
           <div className="text-[#111713] font-black truncate">{title}</div>
-          <div className="text-sm text-[#648770] font-medium">
-            Drag / scroll left-right to see previous/next dates
-          </div>
+          <div className="text-sm text-[#648770] font-medium">Drag left/right to explore more dates.</div>
         </div>
 
-        {/* ✅ Mobile: controls become horizontal chip row (no wrap mess) */}
         <div className="flex gap-2 overflow-x-auto scrollbar-hide pb-1 -mx-1 px-1 md:overflow-visible md:flex-wrap md:pb-0 md:mx-0 md:px-0">
-          {[
-            { k: "MY", label: "MyVeg" },
-            { k: "MARKET", label: "Market" },
-            { k: "COMPARE", label: "Compare" },
-          ].map((b) => (
-            <button
-              key={b.k}
-              onClick={() => setView(b.k as ViewMode)}
-              className={[
-                "shrink-0 px-3 py-2 rounded-full text-sm font-black border transition",
-                view === b.k
-                  ? "bg-[#111713] text-white border-[#111713]"
-                  : "bg-white text-[#111713] border-[#e0e8e3] hover:bg-[#f6f8f7]",
-              ].join(" ")}
-            >
-              {b.label}
-            </button>
-          ))}
+          {showViewControls ? (
+            [
+              { k: "MY", label: "MyVeg" },
+              { k: "MARKET", label: "Market" },
+              { k: "COMPARE", label: "Compare" },
+            ].map((b) => (
+              <button
+                key={b.k}
+                onClick={() => setView(b.k as ViewMode)}
+                className={[
+                  "shrink-0 px-3 py-2 rounded-full text-sm font-black border transition",
+                  view === b.k
+                    ? "bg-[#111713] text-white border-[#111713]"
+                    : "bg-white text-[#111713] border-[#e0e8e3] hover:bg-[#f6f8f7]",
+                ].join(" ")}
+              >
+                {b.label}
+              </button>
+            ))
+          ) : (
+            <span className="shrink-0 px-3 py-2 rounded-full text-sm font-black border border-[#e0e8e3] bg-white text-[#111713]">
+              Market
+            </span>
+          )}
 
           <button
             onClick={() => setMode((m) => (m === "ABS" ? "PCT" : "ABS"))}
             className="shrink-0 px-3 py-2 rounded-full text-sm font-black border border-[#e0e8e3] bg-white hover:bg-[#f6f8f7]"
           >
-            {mode === "ABS" ? "Price" : "% Change"}
+            {mode === "ABS" ? "Price (AED)" : "% Change"}
           </button>
         </div>
       </div>
 
-      {/* ✅ Chart wrapper */}
-      <div
-        ref={wrapperRef}
-        className="relative w-full select-none overflow-hidden rounded-2xl"
-      >
-        {/* ✅ Top hover label (clamped width so it never overflows mobile) */}
+      {/* ✅ wrapper is now horizontally scrollable */}
+     <div ref={wrapperRef} className="relative w-full select-none overflow-x-hidden overflow-y-visible rounded-2xl">
         <div
           ref={topLabelRef}
           className="absolute left-3 top-3 z-10 rounded-lg bg-white/95 border border-black/10 px-3 py-2 text-[#111713] shadow-md text-sm font-black"
@@ -461,14 +745,14 @@ export default function ProductTrendTVChart({
           }}
         />
 
-        {/* Bottom time pill */}
         <div
           ref={bottomTimeRef}
           className="absolute bottom-2 z-10 rounded-md bg-[#111713] text-white px-3 py-1 text-xs font-black shadow-md"
-          style={{ opacity: 0, pointerEvents: "none", width: 140 }}
+          style={{ opacity: 0, pointerEvents: "none", width: 180 }}
         />
 
-        <div ref={containerRef} className="w-full" />
+        {/* ✅ chart canvas widened so labels show fully */}
+       <div ref={containerRef} className="w-full" style={{ height }} />
       </div>
     </div>
   );

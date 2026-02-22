@@ -2,10 +2,13 @@
 
 import Link from "next/link";
 import dynamic from "next/dynamic";
-import { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import type { DbProduct } from "@/lib/productsDb";
 import type { TVPoint } from "@/components/ProductTrendTVChart";
+import { getSupabase } from "@/lib/supabaseClient";
+
+type RangeKey = React.ComponentProps<typeof ProductTrendTVChart>["range"];
 
 // ✅ Lazy-load chart so product page loads faster (no "Loading..." text shown)
 const ProductTrendTVChart = dynamic(() => import("@/components/ProductTrendTVChart"), {
@@ -13,9 +16,12 @@ const ProductTrendTVChart = dynamic(() => import("@/components/ProductTrendTVCha
   loading: () => null,
 });
 
-type RangeKey = "1D" | "10D" | "1W" | "1M" | "3M" | "6M" | "1Y" | "MAX";
-
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL!;
+
+// ✅ Support contacts
+const SUPPORT_CALL_NUMBER = "7010220771";
+// WhatsApp needs country code. Assuming India (+91). Change if needed.
+const SUPPORT_WHATSAPP_NUMBER_E164 = "917010220771";
 
 function storagePublicUrl(path?: string | null) {
   if (!path) return "";
@@ -106,6 +112,41 @@ function shipmentLabel(mode?: string | null) {
   return null;
 }
 
+function formatUpdatedAtDubai(d?: string | null) {
+  if (!d) return "";
+  const dt = new Date(d);
+  if (Number.isNaN(dt.getTime())) return d;
+
+  // Format in Dubai time
+  return dt.toLocaleString("en-GB", {
+    timeZone: "Asia/Dubai",
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+    hour12: true,
+  });
+}
+
+/** Optional: normalize packaging display */
+function formatPackaging(raw?: string | null) {
+  const p = (raw ?? "").trim();
+  if (!p) return "";
+  // If already starts with "Packaging:", keep it as-is
+  if (/^packaging:/i.test(p)) return p;
+
+  // Try to convert "3.1kg Mesh bag" -> "Packaging: Mesh bag (3.1 kg)"
+  const m = p.match(/^\s*([\d.]+)\s*kg\s+(.+)\s*$/i);
+  if (m) {
+    const qty = m[1];
+    const name = m[2].trim();
+    return `Packaging: ${name} (${qty} kg)`;
+  }
+
+  return `Packaging: ${p}`;
+}
+
 export default function ProductDetailClient({
   product,
   isAlAweerLite = false,
@@ -126,6 +167,10 @@ export default function ProductDetailClient({
   const [data, setData] = useState<TrendPoint[]>([]);
   const [avgText, setAvgText] = useState("Avg: -");
 
+  // ✅ DB-driven last updated for Al Aweer rate (from price_updates.created_at)
+  const [marketUpdatedAt, setMarketUpdatedAt] = useState<string | null>(null);
+  const [marketAvgFromDb, setMarketAvgFromDb] = useState<number | null>(null);
+
   // ✅ avoid window access during render (prevents hydration quirks)
   const [chartHeight, setChartHeight] = useState(560);
   useEffect(() => {
@@ -137,16 +182,16 @@ export default function ProductDetailClient({
 
   const title = product.name;
   const origin = product.origin_country ?? "UAE";
-  const type = "Regular"; // DB doesn't have type yet (we can add later)
-  const unit = product.unit ?? "KG";
+  const grade = "Regular"; // DB doesn't have grade yet (we can add later)
+  const unit = product.unit ?? "kg";
 
-  // ✅ Market-only for Price Analysis
-  const marketAvg = product.market_price_aed ?? 0;
+  // ✅ Market-only for Price Analysis (DB override if found)
+  const marketAvg = marketAvgFromDb ?? (product.market_price_aed ?? 0);
 
   const slugOrId = product.slug || product.id;
 
   // ✅ Pull shipment from DB (products.shipment_mode)
-  const ship = shipmentLabel(product.shipment_mode);
+  const ship = shipmentLabel((product as any).shipment_mode);
 
   // ✅ Prefetch chart chunk BEFORE opening overlay (feels instant, no "loading" text)
   const openTrendPageFast = async () => {
@@ -166,6 +211,62 @@ export default function ProductDetailClient({
     const next = qs.toString();
     router.replace(next ? `${pathname}?${next}` : pathname, { scroll: false });
   };
+
+  // ✅ Load the LATEST DB price update for this product using:
+  // - price_updates.product_key (text)
+  // - price_updates.created_at (timestamptz)
+  // - price_updates.price (numeric)
+  useEffect(() => {
+    const supabase = getSupabase();
+    if (!supabase) return;
+
+    let cancelled = false;
+
+    const run = async () => {
+      try {
+        // ✅ product_key is your identifier (most likely equals product.slug)
+        const productKey = product.slug || product.id;
+
+        const { data: row, error } = await supabase
+          .from("price_updates")
+          .select("created_at, price")
+          .eq("product_key", productKey)
+          .order("created_at", { ascending: false })
+          .limit(1)
+          .maybeSingle();
+
+        if (cancelled) return;
+
+        if (error) {
+          console.error("price_updates fetch error:", error);
+          setMarketUpdatedAt(null);
+          return;
+        }
+        if (!row) {
+          console.warn("No price_updates row found for product_key:", productKey);
+          setMarketUpdatedAt(null);
+          return;
+        }
+
+        // ✅ last updated time
+        setMarketUpdatedAt((row as any).created_at ?? null);
+
+        // ✅ override market price from DB
+        const p = (row as any).price;
+        const num = typeof p === "number" ? p : Number(p);
+        if (Number.isFinite(num)) setMarketAvgFromDb(num);
+      } catch (e) {
+        console.error("price_updates exception:", e);
+        if (!cancelled) setMarketUpdatedAt(null);
+      }
+    };
+
+    run();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [product.slug, product.id]);
 
   // Load dummy history when opening trend page
   useEffect(() => {
@@ -210,70 +311,86 @@ export default function ProductDetailClient({
   // ✅ Market series only (UI is market-only; chart can still accept myveg empty)
   const marketSeries = useMemo(() => toTVSeries(data, "marketAvg"), [data]);
 
+  const onWhatsAppSupport = () => {
+    const msg = encodeURIComponent(`Hi, I need support for ${title} (MyVegMarket).`);
+    const url = `https://wa.me/${SUPPORT_WHATSAPP_NUMBER_E164}?text=${msg}`;
+    window.open(url, "_blank", "noopener,noreferrer");
+  };
+
+  const onCallSupport = () => {
+    window.location.href = `tel:+91${SUPPORT_CALL_NUMBER}`;
+  };
+
   return (
     <>
       {/* ✅ FULL PAGE TREND OVERLAY */}
       {trendOpen && (
         <div className="fixed inset-0 z-[9999] bg-[#f6f8f7]">
           <div className="h-full w-full px-4 sm:px-8 lg:px-16 pt-6 pb-6 overflow-hidden">
-            {/* Top bar */}
-            <div className="max-w-[1400px] mx-auto flex items-center justify-between gap-4">
+            {/* Premium Top bar */}
+            <div className="max-w-[1400px] mx-auto flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
               <div className="min-w-0">
-                <div className="text-[#111713] text-xl sm:text-2xl font-black truncate">
-                  {title} — Price Trend
+                <div className="text-[#111713] text-2xl sm:text-3xl font-black truncate">
+                  {title}
                 </div>
                 <div className="text-[#648770] text-sm font-medium">
-                  Market price trend (Al Aweer reference)
+                  Al Aweer market trend
                 </div>
               </div>
 
-              <button
-                onClick={closeTrendPage}
-                className="h-11 px-5 rounded-full bg-white border border-[#e0e8e3] text-[#111713] font-black hover:shadow-sm flex items-center gap-2 shrink-0"
-                title="Close"
-              >
-                <span className="material-symbols-outlined">close</span>
-                Close
-              </button>
+              <div className="flex items-center gap-3 sm:gap-4">
+                {/* Market Avg pill */}
+                <div className="px-4 py-2 rounded-full bg-white border border-[#e0e8e3] text-[#111713] font-black text-sm">
+                  {avgText}
+                </div>
+
+                {/* Close */}
+                <button
+                  onClick={closeTrendPage}
+                  className="h-11 px-5 rounded-full bg-white border border-[#e0e8e3] text-[#111713] font-black hover:shadow-sm flex items-center gap-2"
+                  title="Close"
+                >
+                  <span className="material-symbols-outlined">close</span>
+                  Close
+                </button>
+              </div>
             </div>
 
-            {/* Range + Avg */}
+            {/* Controls Row */}
             <div className="max-w-[1400px] mx-auto mt-5 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-              <div className="flex gap-2 overflow-x-auto scrollbar-hide pb-1 -mx-1 px-1">
-                {(["1D", "10D", "1W", "1M", "3M", "6M", "1Y", "MAX"] as RangeKey[]).map(
-                  (k) => (
-                    <button
-                      key={k}
-                      onClick={() => setRange(k)}
-                      className={[
-                        "shrink-0 px-4 py-2 rounded-full text-sm font-black border transition",
-                        range === k
-                          ? "bg-[#1db954] text-white border-[#1db954]"
-                          : "bg-white text-[#111713] border-[#e0e8e3] hover:bg-[#f6f8f7]",
-                      ].join(" ")}
-                    >
-                      {k}
-                    </button>
-                  )
-                )}
-              </div>
+              <div className="flex items-center gap-3">
+                <div className="text-xs font-black uppercase tracking-wider text-[#648770]">
+                  Range
+                </div>
 
-              <div className="shrink-0 px-4 py-2 rounded-full text-sm font-black border border-[#e0e8e3] bg-white text-[#111713]">
-                {avgText}
+                <select
+                  value={range}
+                  onChange={(e) => setRange(e.target.value as RangeKey)}
+                  className="h-11 px-4 rounded-full bg-white border border-[#e0e8e3]
+                       text-[#111713] font-black text-sm outline-none
+                       focus:ring-2 focus:ring-[#1db954]/20"
+                >
+                  <option value="1D">1 Day</option>
+                  <option value="1W">1 Week</option>
+                  <option value="1M">1 Month</option>
+                  <option value="3M">3 Months</option>
+                  <option value="6M">6 Months</option>
+                  <option value="1Y">1 Year</option>
+                  <option value="MAX">Max</option>
+                </select>
               </div>
             </div>
 
-            {/* Chart */}
+            {/* Chart Card */}
             <div className="max-w-[1400px] mx-auto mt-4 h-[calc(100vh-170px)] min-h-0">
-              <div className="h-full rounded-[26px] bg-white border border-[#e0e8e3] shadow-sm p-4 overflow-hidden">
+              <div className="h-full rounded-[28px] bg-white border border-[#e0e8e3] shadow-sm p-4 sm:p-5 overflow-hidden">
                 {loading || data.length === 0 ? (
-                  // ✅ No "Loading..." text — subtle skeleton only
                   <div className="h-full w-full rounded-2xl bg-[#f6f8f7] animate-pulse" />
                 ) : (
                   <ProductTrendTVChart
                     title={`${title} - Market Price Trend`}
                     range={range}
-                    myveg={[]} // ✅ hide MyVegMarket series
+                    myveg={[]} // ✅ keep hidden
                     market={marketSeries}
                     height={chartHeight}
                     onAvgTextChange={(text: string) => setAvgText(text || "Avg: -")}
@@ -311,7 +428,7 @@ export default function ProductDetailClient({
 
                 <div className="aspect-square w-full bg-[#f0f4f2] flex items-center justify-center p-6">
                   <img
-                    src={safeImg(storagePublicUrl(product?.image_url || ""))}
+                    src={safeImg(storagePublicUrl((product as any)?.image_url || ""))}
                     alt={title}
                     className="w-full h-full object-contain"
                     onError={(e) => {
@@ -322,14 +439,7 @@ export default function ProductDetailClient({
                 </div>
               </div>
 
-              <div className="bg-white border border-[#e0e8e3] rounded-2xl p-4 shadow-sm flex items-center justify-between">
-                <span className="px-3 py-1 rounded-full bg-[#1db954]/10 text-[#1db954] text-[11px] font-black uppercase tracking-tight">
-                  Verified Supplier
-                </span>
-                <span className="text-sm text-[#648770] font-medium">
-                  SKU: MV-{product.slug}
-                </span>
-              </div>
+              {/* ✅ SKU / Verified supplier removed completely */}
             </div>
 
             {/* Right */}
@@ -339,15 +449,15 @@ export default function ProductDetailClient({
               </h1>
 
               <div className="mt-3 text-[#648770] font-medium">
-                {/* Line 1: Origin */}
+                {/* Line 1: Origin + Grade + Unit */}
                 <p className="flex items-center gap-2">
                   <span className="material-symbols-outlined text-base">location_on</span>
                   <span>
-                    Origin: {origin} • {type} • {unit}
+                    Origin: {origin} • Grade: {grade} • Unit: {unit}
                   </span>
                 </p>
 
-                {/* Line 2: Shipment (only if DB has value) */}
+                {/* Line 2: Shipment */}
                 {ship && (
                   <p className="mt-1 flex items-center gap-2 text-[#648770] font-medium">
                     <span className="material-symbols-outlined text-base">{ship.icon}</span>
@@ -361,7 +471,7 @@ export default function ProductDetailClient({
               <div className="mt-7 bg-white border border-[#e0e8e3] p-6 rounded-[28px] shadow-sm">
                 <div className="flex items-center justify-between mb-6">
                   <h3 className="font-black flex items-center gap-2 text-lg text-[#111713]">
-                    <span className="material-symbols-outlined text-[#1db954]">
+                    <span className="material-symbols-outlined text-[#1db954]" aria-hidden="true">
                       analytics
                     </span>
                     Price Analysis
@@ -373,14 +483,23 @@ export default function ProductDetailClient({
                   <div className="rounded-2xl border border-[#e0e8e3] bg-[#fbfcfb] p-5">
                     <div className="grid gap-4 grid-cols-1">
                       <div className="rounded-2xl bg-white border border-[#e0e8e3] p-4">
-                        <div className="text-[11px] font-black uppercase tracking-wider text-[#648770] mb-1">
-                          Al Aweer Rate
+                        <div className="flex items-start justify-between gap-3">
+                          <div className="text-[11px] font-black uppercase tracking-wider text-[#648770] mb-1">
+                            AL AWEER RATE
+                          </div>
+
+                          <div className="text-[11px] font-semibold text-[#6b7280] whitespace-nowrap">
+                            Last updated:{" "}
+                            {marketUpdatedAt ? formatUpdatedAtDubai(marketUpdatedAt) : "—"}
+                          </div>
                         </div>
+
                         <div className="text-2xl font-black text-[#111713]">
                           AED {marketAvg.toFixed(2)}
                         </div>
+
                         <div className="text-xs text-[#648770] font-medium mt-1">
-                          Reference only
+                          Reference rate (Al Aweer)
                         </div>
                       </div>
                     </div>
@@ -413,7 +532,7 @@ export default function ProductDetailClient({
                       </svg>
 
                       <span className="absolute bottom-2 right-2 text-[10px] font-black text-[#111713] bg-white/80 border border-black/10 px-2 py-1 rounded-full">
-                        VIEW
+                        View Price Trend
                       </span>
                     </div>
                   </button>
@@ -426,21 +545,23 @@ export default function ProductDetailClient({
                   <p className="text-[11px] font-black uppercase tracking-wider text-[#648770] mb-1">
                     Type
                   </p>
-                  <p className="font-black text-[#111713]">{type}</p>
+                  <p className="font-black text-[#111713]">{grade}</p>
                 </div>
 
                 <div className="bg-white border border-[#e0e8e3] rounded-2xl p-4 shadow-sm">
                   <p className="text-[11px] font-black uppercase tracking-wider text-[#648770] mb-1">
                     Packaging
                   </p>
-                  <p className="font-black text-[#111713]">{product.packaging ?? ""}</p>
+                  <p className="font-black text-[#111713]">
+                    {formatPackaging((product as any).packaging)}
+                  </p>
                 </div>
 
                 <div className="bg-white border border-[#e0e8e3] rounded-2xl p-4 shadow-sm">
                   <p className="text-[11px] font-black uppercase tracking-wider text-[#648770] mb-1">
                     Freshness
                   </p>
-                  <p className="font-black text-[#111713]">Harvested Today</p>
+                  <p className="font-black text-[#111713]">Fresh stock (subject to availability)</p>
                 </div>
               </div>
 
@@ -454,16 +575,24 @@ export default function ProductDetailClient({
                 </p>
               </div>
 
-              {/* Actions */}
+              {/* Support Actions */}
               <div className="mt-8 flex flex-col sm:flex-row gap-4">
-                <button className="flex-1 bg-[#1db954] text-white font-black py-4 rounded-full flex items-center justify-center gap-3 shadow-lg shadow-[#1db954]/20 hover:scale-[1.01] transition-transform active:scale-95">
-                  <span className="material-symbols-outlined">chat</span>
-                  WhatsApp Order
+                <button
+                  type="button"
+                  onClick={onWhatsAppSupport}
+                  className="flex-1 bg-[#1db954] text-white font-black py-4 rounded-full flex items-center justify-center gap-3 shadow-lg shadow-[#1db954]/20 hover:scale-[1.01] transition-transform active:scale-95"
+                >
+                  <span className="material-symbols-outlined">support_agent</span>
+                  WhatsApp Support
                 </button>
 
-                <button className="flex-1 bg-white border border-[#1db954] text-[#1db954] font-black py-4 rounded-full flex items-center justify-center gap-3 hover:bg-[#1db954]/5 transition-colors">
+                <button
+                  type="button"
+                  onClick={onCallSupport}
+                  className="flex-1 bg-white border border-[#1db954] text-[#1db954] font-black py-4 rounded-full flex items-center justify-center gap-3 hover:bg-[#1db954]/5 transition-colors"
+                >
                   <span className="material-symbols-outlined">call</span>
-                  Contact Sales
+                  Call Support
                 </button>
               </div>
             </div>
