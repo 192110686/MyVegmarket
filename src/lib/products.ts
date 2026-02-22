@@ -826,7 +826,7 @@ export const PRODUCTS: Product[] = [
   badgeColor: "bg-green-700",
   packaging: "5L Tin",
   freshness: "Sealed Pack",
-  about: "Premium olive oil for salads, cooking and horeca supply.",
+  about: "Premium olive oil for salads, cooking and HORECA supply.",
 },
 {
   id: "sunflower-oil",
