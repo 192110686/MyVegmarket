@@ -268,24 +268,108 @@ export default function ProductDetailClient({
     };
   }, [product.slug, product.id]);
 
-  // Load dummy history when opening trend page
-  useEffect(() => {
-    if (!trendOpen) return;
+ // ✅ Load REAL history from DB when opening trend page
+useEffect(() => {
+  if (!trendOpen) return;
 
-    setLoading(true);
-    const t = setTimeout(() => {
-      const history = makeDummyHistory({
-        start: "2025-01-01",
-        days: 900,
-        seed: hashSeed(slugOrId || "default"),
+  const supabase = getSupabase();
+  if (!supabase) return;
+
+  let cancelled = false;
+
+  function rangeToStartISO(r: RangeKey) {
+    const now = new Date();
+    const d = new Date(now);
+    d.setSeconds(0, 0);
+
+    if (r === "1D") d.setDate(d.getDate() - 1);
+    else if (r === "1W") d.setDate(d.getDate() - 7);
+    else if (r === "1M") d.setMonth(d.getMonth() - 1);
+    else if (r === "3M") d.setMonth(d.getMonth() - 3);
+    else if (r === "6M") d.setMonth(d.getMonth() - 6);
+    else if (r === "1Y") d.setFullYear(d.getFullYear() - 1);
+    else return null; // MAX
+
+    return d.toISOString();
+  }
+
+  const run = async () => {
+    try {
+      setLoading(true);
+
+      const productKey = product.slug || product.id;
+      const startISO = rangeToStartISO(range);
+
+      let q = supabase
+        .from("price_history")
+        .select("price, published_at, source")
+        .eq("product_key", productKey)
+        .order("published_at", { ascending: true });
+
+      if (startISO) q = q.gte("published_at", startISO);
+
+      const { data: rows, error } = await q;
+
+      if (cancelled) return;
+
+      if (error) {
+        console.error("price_history fetch error:", error);
+        setData([]);
+        setLoading(false);
+        setAvgText("Avg: -");
+        return;
+      }
+
+      const out: TrendPoint[] = (rows ?? [])
+        .map((r: any) => {
+          const ts = r.published_at || null;
+          const p = typeof r.price === "number" ? r.price : Number(r.price);
+          if (!ts || !Number.isFinite(p)) return null;
+
+          const iso = new Date(ts).toISOString();
+          const source = String(r.source || "").toLowerCase();
+          const isMarket = source === "al_aweer";
+
+          return {
+            time: iso,
+            marketAvg: isMarket ? p : NaN,
+            myPrice: !isMarket ? p : NaN,
+          };
+        })
+        .filter(Boolean) as TrendPoint[];
+
+      // Fill forward market price so the line stays continuous
+      let lastMarket: number | null = null;
+      const filled: TrendPoint[] = out.map((pt) => {
+        const mv = Number.isFinite(pt.marketAvg) ? pt.marketAvg : null;
+        if (mv != null) lastMarket = mv;
+
+        return {
+          ...pt,
+          marketAvg: mv != null ? mv : lastMarket ?? 0,
+          myPrice: Number.isFinite(pt.myPrice) ? pt.myPrice : 0,
+        };
       });
-      setData(history);
+
+      setData(filled);
       setLoading(false);
       setAvgText("Avg: -");
-    }, 120);
+    } catch (e) {
+      console.error("price_history exception:", e);
+      if (!cancelled) {
+        setData([]);
+        setLoading(false);
+        setAvgText("Avg: -");
+      }
+    }
+  };
 
-    return () => clearTimeout(t);
-  }, [trendOpen, slugOrId]);
+  run();
+
+  return () => {
+    cancelled = true;
+  };
+}, [trendOpen, slugOrId, range]);
 
   // ESC closes full page
   useEffect(() => {

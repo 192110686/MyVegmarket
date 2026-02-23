@@ -8,6 +8,7 @@ import {
   type ISeriesApi,
   CrosshairMode,
   type BusinessDay,
+  type UTCTimestamp,
 } from "lightweight-charts";
 
 export type TVPoint = { time: string; value: number }; // "YYYY-MM-DD"
@@ -28,7 +29,24 @@ type Props = {
 function clamp(n: number, min: number, max: number) {
   return Math.max(min, Math.min(max, n));
 }
+function isISODateOnly(s: string) {
+  return /^\d{4}-\d{2}-\d{2}$/.test(s);
+}
 
+function toUTCTimestampSeconds(timeStr: string): UTCTimestamp {
+  // Supports YYYY-MM-DD and full ISO
+  if (isISODateOnly(timeStr)) {
+    // interpret as UTC midnight
+    const [y, m, d] = timeStr.split("-").map(Number);
+    const ms = Date.UTC(y, m - 1, d, 0, 0, 0, 0);
+    return Math.floor(ms / 1000) as UTCTimestamp;
+  }
+
+  const ms = new Date(timeStr).getTime();
+  // fallback: if invalid, treat as now (prevents crashes)
+  const safeMs = Number.isFinite(ms) ? ms : Date.now();
+  return Math.floor(safeMs / 1000) as UTCTimestamp;
+}
 function parseBusinessDay(yyyy_mm_dd: string): BusinessDay {
   const [y, m, d] = yyyy_mm_dd.split("-").map(Number);
   return { year: y, month: m, day: d };
@@ -109,29 +127,40 @@ function normalizeForRange(range: RangeKey, raw: TVPoint[]): TVPoint[] {
 
   const isDaily = range === "1D" || range === "1W" || range === "1M";
 
-  if (isDaily) {
-    // Map latest value per day
-    const dayMap = new Map<string, number>();
-    for (const p of s) dayMap.set(startOfDayISO(p.time), p.value);
+if (isDaily) {
+  // ✅ Keep ALL intraday points (ISO timestamps), but still allow carry-forward gaps
+  // If data is date-only, it will still work.
+  const out: TVPoint[] = [];
 
-    const first = startOfDayISO(s[0].time);
-    const last = startOfDayISO(s[s.length - 1].time);
+  // First, keep all existing points (sorted)
+  for (const p of s) out.push({ time: p.time, value: p.value });
 
-    // fill every day from first..last
-    const out: TVPoint[] = [];
-    let cur = first;
-    let carry = dayMap.get(first) ?? s[0].value;
+  // If points are date-only (no time), we can still fill missing days
+  // But if points are full ISO, filling every day with fake points would add noise,
+  // so we only fill for date-only datasets.
+  const dateOnly = s.every((p) => isISODateOnly(startOfDayISO(p.time)));
 
-    // guard to avoid infinite loops
-    for (let i = 0; i < 5000; i++) {
-      const v = dayMap.get(cur);
-      if (typeof v === "number") carry = v;
-      out.push({ time: cur, value: carry });
-      if (cur === last) break;
-      cur = addDays(cur, 1);
-    }
-    return out;
+  if (!dateOnly) return out;
+
+  const dayMap = new Map<string, number>();
+  for (const p of s) dayMap.set(startOfDayISO(p.time), p.value);
+
+  const first = startOfDayISO(s[0].time);
+  const last = startOfDayISO(s[s.length - 1].time);
+
+  const filled: TVPoint[] = [];
+  let cur = first;
+  let carry = dayMap.get(first) ?? s[0].value;
+
+  for (let i = 0; i < 5000; i++) {
+    const v = dayMap.get(cur);
+    if (typeof v === "number") carry = v;
+    filled.push({ time: cur, value: carry });
+    if (cur === last) break;
+    cur = addDays(cur, 1);
   }
+  return filled;
+}
 
   // Monthly (3M/6M/1Y/MAX) -> latest point per month
   const monthMap = new Map<string, TVPoint>(); // monthStart -> latest point
@@ -326,7 +355,12 @@ export default function ProductTrendTVChart({
 
   const lastAvgTextRef = useRef<string>("");
   const rafRef = useRef<number | null>(null);
-
+function toChartSeries(series: TVPoint[]) {
+  return (series ?? []).map((p) => ({
+    time: toUTCTimestampSeconds(p.time),
+    value: p.value,
+  }));
+}
   /** ✅ chart width so ALL labels are visible, and wrapper becomes scrollable */
   const [chartWidth, setChartWidth] = useState<number | null>(null);
 
@@ -563,7 +597,7 @@ timeScale: {
     const myS = myRef.current;
     if (!chart || !myS) return;
 
-    myS.setData(mySeries as any);
+    myS.setData(toChartSeries(mySeries) as any);
     try {
       myS.applyOptions({ visible: view !== "MARKET" && myAbs.length > 0 });
     } catch {}
@@ -581,7 +615,7 @@ timeScale: {
           crosshairMarkerRadius: 4,
         });
       }
-      marketRef.current.setData(mkSeries as any);
+     marketRef.current.setData(toChartSeries(mkSeries) as any);
     } else {
       if (marketRef.current) {
         try {
