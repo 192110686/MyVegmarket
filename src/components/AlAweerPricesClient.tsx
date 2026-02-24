@@ -41,12 +41,16 @@ type RowVM = {
   category: ProductCategory;
   unit: string; // kept for search compatibility
   origin: string;
-  packaging?: string | null;
+
+  // ✅ NEW: pack size (only weight like 3kg)
+  pack: string | null;
 
   minPrice: number | null;
   maxPrice: number | null;
   marketPrice: number | null;
   lastTimeLabel: string | null;
+
+  carried?: boolean;
 };
 
 function labelCat(c: ProductCategory) {
@@ -54,10 +58,19 @@ function labelCat(c: ProductCategory) {
 }
 
 function formatPrice(n: number | null | undefined) {
-  if (n === null || n === undefined) return "—";
+  if (n === null || n === undefined) return "NA";
   const num = Number(n);
-  if (!Number.isFinite(num)) return "—";
+  if (!Number.isFinite(num)) return "NA";
   return num.toFixed(2);
+}
+
+// ✅ only show weight (3kg, 3.8kg, 500g). If missing -> NA
+function formatPack(p?: string | null) {
+  const v = (p ?? "").trim();
+  if (!v) return "NA";
+  const m = v.match(/(\d+(?:\.\d+)?)\s*(kg|g)\b/i);
+  if (!m) return "NA";
+  return `${m[1]}${m[2].toLowerCase()}`;
 }
 
 // ✅ stable formatting (no hydration mismatch)
@@ -107,11 +120,13 @@ function downloadBlob(blob: Blob, filename: string) {
 export default function AlAweerPricesClient({
   initialProducts,
   initialAggBySlug,
+  initialCarryAggBySlug,
   initialDate,
   initialToast,
 }: {
   initialProducts: DbProduct[];
   initialAggBySlug: Record<string, DayAgg>;
+  initialCarryAggBySlug: Record<string, DayAgg>;
   initialDate: string;
   initialToast: string | null;
 }) {
@@ -133,6 +148,7 @@ export default function AlAweerPricesClient({
 
   const products = initialProducts;
   const aggBySlug = initialAggBySlug;
+  const carryAggBySlug = initialCarryAggBySlug;
 
   useEffect(() => {
     const onDown = (e: MouseEvent) => {
@@ -163,21 +179,31 @@ export default function AlAweerPricesClient({
   const handleSelectAllCats = () => setSelectedCats([...ALL_CATEGORIES]);
   const handleClearCats = () => setSelectedCats([]);
 
+  const isEmptyAgg = (a?: DayAgg) => !a || (a.min == null && a.max == null && a.last == null);
+
   const rows: RowVM[] = useMemo(() => {
     const list: RowVM[] = products.map((p) => {
-      const agg = aggBySlug[p.slug] || { min: null, max: null, last: null, lastTime: null };
+      const dayAgg = aggBySlug[p.slug];
+      const carryAgg = carryAggBySlug[p.slug];
+
+      const useCarry = isEmptyAgg(dayAgg) && !isEmptyAgg(carryAgg);
+      const agg = useCarry
+        ? (carryAgg as DayAgg)
+        : dayAgg || { min: null, max: null, last: null, lastTime: null };
+
       return {
         id: p.id,
         slug: p.slug,
         name: p.name,
         category: p.category,
-        unit: p.unit, // kept for search compatibility
+        unit: p.unit,
         origin: (p.origin_country || "—").trim() || "—",
-        packaging: p.packaging,
+        pack: p.packaging,
         minPrice: agg.min,
         maxPrice: agg.max,
         marketPrice: agg.last,
         lastTimeLabel: fmtTimeOnly(agg.lastTime),
+        carried: useCarry,
       };
     });
 
@@ -186,12 +212,8 @@ export default function AlAweerPricesClient({
     if (search.trim()) {
       const s = search.toLowerCase();
       filtered = filtered.filter((p) => {
-        const subtitle = (p.packaging ?? p.unit ?? "").toLowerCase();
-        return (
-          p.name.toLowerCase().includes(s) ||
-          subtitle.includes(s) ||
-          p.origin.toLowerCase().includes(s)
-        );
+        const subtitle = `${p.pack ?? ""} ${p.unit ?? ""}`.toLowerCase();
+        return p.name.toLowerCase().includes(s) || subtitle.includes(s) || p.origin.toLowerCase().includes(s);
       });
     }
 
@@ -204,7 +226,7 @@ export default function AlAweerPricesClient({
     });
 
     return filtered;
-  }, [products, aggBySlug, selectedCats, search, showOriginFilter, origin]);
+  }, [products, aggBySlug, carryAggBySlug, selectedCats, search, showOriginFilter, origin]);
 
   const handleDownloadPdf = async () => {
     const qs = new URLSearchParams({
@@ -414,11 +436,13 @@ export default function AlAweerPricesClient({
           </div>
         </div>
 
-        {/* DESKTOP (Unit column removed) */}
+        {/* DESKTOP */}
         <div className="hidden md:block bg-white border border-[#e0e8e3] rounded-2xl overflow-hidden shadow-sm">
-          <div className="grid grid-cols-[3fr_1.5fr_1fr_1fr_1.2fr_1fr] gap-0 bg-green-600 text-white text-sm font-semibold">
+          {/* ✅ Added Pack column between Origin and MIN */}
+          <div className="grid grid-cols-[3fr_1.5fr_0.8fr_1fr_1fr_1.2fr_1fr] gap-0 bg-green-600 text-white text-sm font-semibold">
             <div className="px-5 py-3">Product</div>
             <div className="px-5 py-3">Origin</div>
+            <div className="px-5 py-3 text-right">Pack</div>
             <div className="px-5 py-3 text-right">MIN</div>
             <div className="px-5 py-3 text-right">MAX</div>
             <div className="px-5 py-3 text-right">Market (AED)</div>
@@ -434,12 +458,16 @@ export default function AlAweerPricesClient({
               onKeyDown={(e) => {
                 if (e.key === "Enter" || e.key === " ") openProduct(p.slug);
               }}
-              className={`grid grid-cols-[3fr_1.5fr_1fr_1fr_1.2fr_1fr] gap-0 text-sm cursor-pointer transition-colors
+              className={`grid grid-cols-[3fr_1.5fr_0.8fr_1fr_1fr_1.2fr_1fr] gap-0 text-sm cursor-pointer transition-colors
                 ${idx % 2 === 0 ? "bg-white" : "bg-[#f6f8f7]"}
                 hover:bg-[#eaf3ee] focus:outline-none focus:ring-2 focus:ring-[#0B5D1E]/15`}
             >
               <div className="px-5 py-3 font-semibold text-[#111713]">{p.name}</div>
               <div className="px-5 py-3 text-[#111713]">{p.origin}</div>
+
+              <div className="px-5 py-3 text-right font-extrabold tabular-nums text-[#111713]">
+                {formatPack(p.pack)}
+              </div>
 
               <div className="px-5 py-3 text-right font-extrabold tabular-nums text-[#111713]">
                 {formatPrice(p.minPrice)}
@@ -454,13 +482,13 @@ export default function AlAweerPricesClient({
               </div>
 
               <div className="px-5 py-3 text-right font-semibold tabular-nums text-[#111713]">
-                {p.lastTimeLabel || "—"}
+                {p.lastTimeLabel || "NA"}
               </div>
             </div>
           ))}
         </div>
 
-        {/* MOBILE (unit removed from subtitle) */}
+        {/* MOBILE */}
         <div className="md:hidden space-y-3">
           {rows.map((p) => (
             <div
@@ -478,6 +506,12 @@ export default function AlAweerPricesClient({
                 <div className="min-w-0">
                   <div className="font-extrabold text-[#111713] leading-tight">{p.name}</div>
                   <div className="mt-1 text-sm font-semibold text-[#648770]">{p.origin}</div>
+
+                  {/* ✅ Pack shown on mobile too */}
+                  <div className="mt-1 text-xs font-semibold text-[#648770]">
+                    Pack: <span className="text-[#111713] font-extrabold">{formatPack(p.pack)}</span>
+                  </div>
+
                   <div className="mt-2 text-xs font-semibold text-[#648770]">
                     MIN:{" "}
                     <span className="text-[#111713] font-extrabold tabular-nums">
@@ -498,7 +532,7 @@ export default function AlAweerPricesClient({
                     {formatPrice(p.marketPrice)}
                   </div>
                   <div className="mt-1 text-xs font-semibold text-[#648770]">
-                    {p.lastTimeLabel || "—"}
+                    {p.lastTimeLabel || "NA"}
                   </div>
                 </div>
               </div>

@@ -20,17 +20,17 @@ export default function Home() {
             >
               <div className="max-w-4xl flex flex-col items-center gap-6 sm:gap-8 px-2">
                 <span className="bg-[#C8A951] text-white text-[10px] font-bold uppercase tracking-[0.2em] px-4 py-1.5 rounded-full">
-                  UAE&apos;s Premium Sourcing Platform
+                  UAE Price Intelligence Platform
                 </span>
 
                 <h1 className="text-white font-extrabold leading-[1.05] tracking-tight text-balance
                                text-5xl sm:text-6xl md:text-7xl lg:text-8xl">
-                  Your Veg <br className="hidden sm:block" /> Partner in UAE
+                  Make Smarter <br className="hidden sm:block" />Trade Decisions
                 </h1>
 
                 <p className="text-white/90 font-medium leading-relaxed text-balance
                               text-base sm:text-lg md:text-xl max-w-2xl">
-                  Get fresh produce with live market prices and reliable delivery across the UAE
+                  Daily Al Aweer wholesale rates with trends-trusted by exporters and bulk buyers aross the UAE.
                 </p>
 
                 <div className="flex flex-col sm:flex-row flex-wrap gap-3 sm:gap-4 mt-2 sm:mt-4 w-full sm:w-auto justify-center">
