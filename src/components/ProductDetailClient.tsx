@@ -581,10 +581,6 @@ useEffect(() => {
                         <div className="text-2xl font-black text-[#111713]">
                           AED {marketAvg.toFixed(2)}
                         </div>
-
-                        <div className="text-xs text-[#648770] font-medium mt-1">
-                          Reference rate (Al Aweer)
-                        </div>
                       </div>
                     </div>
                   </div>
@@ -598,7 +594,7 @@ useEffect(() => {
                   >
                     <div>
                       <div className="text-[11px] uppercase tracking-widest font-black text-[#111713]/45">
-                        PRICE TREND
+                        VIEW PRICE TREND
                       </div>
                       <div className="text-sm text-[#648770] font-medium mt-1">
                         View interactive market price chart (Al Aweer)
@@ -614,10 +610,6 @@ useEffect(() => {
                           strokeWidth="3"
                         />
                       </svg>
-
-                      <span className="absolute bottom-2 right-2 text-[10px] font-black text-[#111713] bg-white/80 border border-black/10 px-2 py-1 rounded-full">
-                        View Price Trend
-                      </span>
                     </div>
                   </button>
                 </div>

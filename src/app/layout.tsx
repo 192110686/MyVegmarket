@@ -17,8 +17,20 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "MyVegMarket",
+  title: {
+    default: "MyVegmarket",
+    template: "%s | MyVegmarket",
+  },
   description: "Dubai's Premium Sourcing Platform",
+  openGraph: {
+    siteName: "MyVegmarket",
+    title: "MyVegmarket",
+    description: "Dubai's Premium Sourcing Platform",
+  },
+  twitter: {
+    title: "MyVegmarket",
+    description: "Dubai's Premium Sourcing Platform",
+  },
 };
 
 export const revalidate = 300;
