@@ -21,6 +21,9 @@ export const metadata: Metadata = {
     default: "MyVegmarket",
     template: "%s | MyVegmarket",
   },
+  verification: {
+  google: "y_RI99OkaWLvMQWpbM_NVwQk0saw_zNWtTfyvl_G3VA",
+},
   description: "Dubai's Premium Sourcing Platform",
   openGraph: {
     siteName: "MyVegmarket",
