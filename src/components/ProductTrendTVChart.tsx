@@ -355,12 +355,7 @@ export default function ProductTrendTVChart({
 
   const lastAvgTextRef = useRef<string>("");
   const rafRef = useRef<number | null>(null);
-function toChartSeries(series: TVPoint[]) {
-  return (series ?? []).map((p) => ({
-    time: toUTCTimestampSeconds(p.time),
-    value: p.value,
-  }));
-}
+
   /** ✅ chart width so ALL labels are visible, and wrapper becomes scrollable */
   const [chartWidth, setChartWidth] = useState<number | null>(null);
 
@@ -597,7 +592,7 @@ timeScale: {
     const myS = myRef.current;
     if (!chart || !myS) return;
 
-    myS.setData(toChartSeries(mySeries) as any);
+    myS.setData(mySeries as any);
     try {
       myS.applyOptions({ visible: view !== "MARKET" && myAbs.length > 0 });
     } catch {}
@@ -615,7 +610,7 @@ timeScale: {
           crosshairMarkerRadius: 4,
         });
       }
-     marketRef.current.setData(toChartSeries(mkSeries) as any);
+      marketRef.current.setData(mkSeries as any);
     } else {
       if (marketRef.current) {
         try {
