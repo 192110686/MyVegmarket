@@ -9,13 +9,45 @@ function makeToken() {
   return crypto.randomBytes(32).toString("hex");
 }
 
+function corsHeaders(origin?: string | null) {
+  const allowedOrigins = [
+    "http://localhost:8081",
+    "http://localhost:3000",
+    "https://www.myvegmarket.com",
+    "https://myvegmarket.com",
+  ];
+
+  const allowOrigin =
+    origin && allowedOrigins.includes(origin) ? origin : allowedOrigins[0];
+
+  return {
+    "Access-Control-Allow-Origin": allowOrigin,
+    "Access-Control-Allow-Methods": "POST, OPTIONS",
+    "Access-Control-Allow-Headers": "Content-Type",
+    "Access-Control-Allow-Credentials": "true",
+  };
+}
+
+export async function OPTIONS(req: Request) {
+  const origin = req.headers.get("origin");
+  return new NextResponse(null, {
+    status: 204,
+    headers: corsHeaders(origin),
+  });
+}
+
 export async function POST(req: Request) {
+  const origin = req.headers.get("origin");
+
   const body = await req.json().catch(() => null);
   const email = (body?.email ?? "").trim().toLowerCase();
   const password = (body?.password ?? "").trim();
 
   if (!email || !password) {
-    return NextResponse.json({ error: "Email and password required" }, { status: 400 });
+    return NextResponse.json(
+      { error: "Email and password required" },
+      { status: 400, headers: corsHeaders(origin) }
+    );
   }
 
   const { data: account, error } = await supabaseAdmin
@@ -25,12 +57,18 @@ export async function POST(req: Request) {
     .maybeSingle();
 
   if (error || !account) {
-    return NextResponse.json({ error: "Invalid email or password" }, { status: 401 });
+    return NextResponse.json(
+      { error: "Invalid email or password" },
+      { status: 401, headers: corsHeaders(origin) }
+    );
   }
 
   const ok = await bcrypt.compare(password, account.password_hash);
   if (!ok) {
-    return NextResponse.json({ error: "Invalid email or password" }, { status: 401 });
+    return NextResponse.json(
+      { error: "Invalid email or password" },
+      { status: 401, headers: corsHeaders(origin) }
+    );
   }
 
   const session_token = makeToken();
@@ -41,10 +79,16 @@ export async function POST(req: Request) {
   ]);
 
   if (sErr) {
-    return NextResponse.json({ error: sErr.message }, { status: 500 });
+    return NextResponse.json(
+      { error: sErr.message },
+      { status: 500, headers: corsHeaders(origin) }
+    );
   }
 
-  const res = NextResponse.json({ ok: true, email: account.email });
+  const res = NextResponse.json(
+    { ok: true, email: account.email, session_token },
+    { headers: corsHeaders(origin) }
+  );
 
   res.cookies.set(COOKIE_NAME, session_token, {
     httpOnly: true,
