@@ -686,7 +686,7 @@ timeScale: {
       }
 
       scheduleAvg();
-      return;
+     
     }
 
     // Monthly ranges (3M/6M/1Y)
