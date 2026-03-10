@@ -39,82 +39,98 @@ export async function OPTIONS(req: Request) {
 export async function POST(req: Request) {
   const origin = req.headers.get("origin");
 
-  const body = await req.json().catch(() => null);
-  const email = (body?.email ?? "").trim().toLowerCase();
-  const password = (body?.password ?? "").trim();
+  try {
+    const body = await req.json().catch(() => null);
+    const email = String(body?.email ?? "").trim().toLowerCase();
+    const password = String(body?.password ?? "").trim();
 
-  if (!email || !password) {
-    return NextResponse.json(
-      { error: "Email and password required" },
-      { status: 400, headers: corsHeaders(origin) }
+    if (!email || !password) {
+      return NextResponse.json(
+        { error: "Email and password required" },
+        { status: 400, headers: corsHeaders(origin) }
+      );
+    }
+
+    if (password.length < 6) {
+      return NextResponse.json(
+        { error: "Password must be at least 6 characters" },
+        { status: 400, headers: corsHeaders(origin) }
+      );
+    }
+
+    const { data, error: checkErr } = await supabaseAdmin
+      .from("exporter_accounts")
+      .select("id,email")
+      .eq("email", email)
+      .limit(2);
+
+    if (checkErr) {
+      return NextResponse.json(
+        { error: checkErr.message },
+        { status: 500, headers: corsHeaders(origin) }
+      );
+    }
+
+    const existing = data ?? [];
+
+    if (existing.length >= 1) {
+      return NextResponse.json(
+        { error: "Email already registered. Please login." },
+        { status: 409, headers: corsHeaders(origin) }
+      );
+    }
+
+    const password_hash = await bcrypt.hash(password, 12);
+
+    const { data: account, error: accErr } = await supabaseAdmin
+      .from("exporter_accounts")
+      .insert([{ email, password_hash }])
+      .select("id,email")
+      .single();
+
+    if (accErr || !account) {
+      return NextResponse.json(
+        { error: accErr?.message ?? "Signup failed" },
+        { status: 500, headers: corsHeaders(origin) }
+      );
+    }
+
+    const session_token = makeToken();
+    const expires = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
+
+    const { error: sErr } = await supabaseAdmin.from("exporter_sessions").insert([
+      {
+        account_id: account.id,
+        session_token,
+        expires_at: expires.toISOString(),
+      },
+    ]);
+
+    if (sErr) {
+      return NextResponse.json(
+        { error: sErr.message },
+        { status: 500, headers: corsHeaders(origin) }
+      );
+    }
+
+    const res = NextResponse.json(
+      { ok: true, email: account.email, session_token },
+      { status: 200, headers: corsHeaders(origin) }
     );
-  }
 
-  if (password.length < 6) {
+    res.cookies.set(COOKIE_NAME, session_token, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "lax",
+      path: "/",
+      expires,
+    });
+
+    return res;
+  } catch (err: any) {
     return NextResponse.json(
-      { error: "Password must be at least 6 characters" },
-      { status: 400, headers: corsHeaders(origin) }
-    );
-  }
-
-  const { data: exists } = await supabaseAdmin
-    .from("exporter_accounts")
-    .select("id")
-    .eq("email", email)
-    .maybeSingle();
-
-  if (exists?.id) {
-    return NextResponse.json(
-      { error: "Email already registered. Please login." },
-      { status: 409, headers: corsHeaders(origin) }
-    );
-  }
-
-  const password_hash = await bcrypt.hash(password, 12);
-
-  const { data: account, error: accErr } = await supabaseAdmin
-    .from("exporter_accounts")
-    .insert([{ email, password_hash }])
-    .select("id,email")
-    .single();
-
-  if (accErr || !account) {
-    return NextResponse.json(
-      { error: accErr?.message ?? "Signup failed" },
+      { error: err?.message || "Signup failed" },
       { status: 500, headers: corsHeaders(origin) }
     );
   }
-
-  const session_token = makeToken();
-  const expires = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
-
-  const { error: sErr } = await supabaseAdmin.from("exporter_sessions").insert([
-    {
-      account_id: account.id,
-      session_token,
-      expires_at: expires.toISOString(),
-    },
-  ]);
-
-  if (sErr) {
-    return NextResponse.json(
-      { error: sErr.message },
-      { status: 500, headers: corsHeaders(origin) }
-    );
-  }
-
-  const res = NextResponse.json(
-    { ok: true, email: account.email, session_token },
-    { headers: corsHeaders(origin) }
-  );
-
-  res.cookies.set(COOKIE_NAME, session_token, {
-    httpOnly: true,
-    secure: process.env.NODE_ENV === "production",
-    sameSite: "lax",
-    path: "/",
-    expires,
-  });
-
-  return res;
 }
