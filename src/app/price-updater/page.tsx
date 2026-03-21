@@ -39,18 +39,16 @@ type UpdateDraft = {
   mode: "existing" | "new";
   product_id?: string;
   product_key: string;
-
   category: string;
   name: string;
-
-  // locked for existing (shown read-only)
   origin_country: string;
   packaging: string;
-
-  unit: string; // ✅ needed for NEW product submission (API requires)
-  variety: string; // optional
-  price: string; // editable
-  currency: string; // "AED"
+  unit: string;
+  variety: string;
+  price: string;
+  currency: string;
+  price_date: string;
+  price_time: string;
 };
 
 function safeSupabase() {
@@ -77,6 +75,13 @@ function todayISO() {
   return `${y}-${m}-${day}`;
 }
 
+function nowTimeISO() {
+  const d = new Date();
+  const h = String(d.getHours()).padStart(2, "0");
+  const min = String(d.getMinutes()).padStart(2, "0");
+  return `${h}:${min}`;
+}
+
 function todayStartISO() {
   const d = new Date();
   d.setHours(0, 0, 0, 0);
@@ -91,7 +96,11 @@ async function sha256Hex(input: string) {
     .join("");
 }
 
-/** ✅ ONLY CHANGE: wrap in Suspense boundary */
+function isMobileViewport() {
+  if (typeof window === "undefined") return false;
+  return window.innerWidth < 1024;
+}
+
 export default function PriceUpdaterPage() {
   return (
     <Suspense fallback={<div className="p-6 font-bold">Loading…</div>}>
@@ -100,22 +109,16 @@ export default function PriceUpdaterPage() {
   );
 }
 
-/** ✅ ONLY CHANGE: move useSearchParams() inside this inner component */
 function PriceUpdaterInner() {
   const router = useRouter();
   const sp = useSearchParams();
 
   const [loading, setLoading] = useState(true);
   const [accessErr, setAccessErr] = useState<string | null>(null);
-
-  const [updater, setUpdater] = useState<{ id: string; name: string } | null>(
-    null
-  );
-
+  const [updater, setUpdater] = useState<{ id: string; name: string } | null>(null);
   const [products, setProducts] = useState<DbProduct[]>([]);
   const [query, setQuery] = useState("");
   const [cat, setCat] = useState("all");
-
   const [selected, setSelected] = useState<UpdateDraft | null>(null);
   const [toast, setToast] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
@@ -126,10 +129,6 @@ function PriceUpdaterInner() {
     lastSubmitAt: string | null;
   }>({ totalToday: 0, mineToday: 0, lastSubmitAt: null });
 
-  // ---------------------------
-  // 1) Secret access check
-  // supports BOTH secret_hash and secret
-  // ---------------------------
   useEffect(() => {
     let mounted = true;
 
@@ -149,9 +148,7 @@ function PriceUpdaterInner() {
 
       const urlSecret = (sp.get("secret") || "").trim();
       const stored =
-        typeof window !== "undefined"
-          ? localStorage.getItem("updater_secret") || ""
-          : "";
+        typeof window !== "undefined" ? localStorage.getItem("updater_secret") || "" : "";
       const secret = urlSecret || stored;
 
       if (!secret) {
@@ -160,11 +157,11 @@ function PriceUpdaterInner() {
         return;
       }
 
-      if (typeof window !== "undefined")
+      if (typeof window !== "undefined") {
         localStorage.setItem("updater_secret", secret);
+      }
 
       const secretHash = await sha256Hex(secret);
-
       let upd: UpdaterRow | null = null;
 
       const byHash = await supabase
@@ -199,12 +196,11 @@ function PriceUpdaterInner() {
     }
 
     initAccess();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+    return () => {
+      mounted = false;
+    };
+  }, [sp]);
 
-  // ---------------------------
-  // 2) Load products from DB
-  // ---------------------------
   useEffect(() => {
     let mounted = true;
 
@@ -232,7 +228,7 @@ function PriceUpdaterInner() {
         return;
       }
 
-      setProducts((data as any) || []);
+      setProducts((data as DbProduct[]) || []);
     }
 
     loadProducts();
@@ -241,9 +237,6 @@ function PriceUpdaterInner() {
     };
   }, [updater]);
 
-  // ---------------------------
-  // 3) Load small header stats (today)
-  // ---------------------------
   useEffect(() => {
     let mounted = true;
 
@@ -278,7 +271,7 @@ function PriceUpdaterInner() {
       setTodayStats({
         totalToday: totalRes.count || 0,
         mineToday: mineRes.count || 0,
-        lastSubmitAt: (lastRes.data as any)?.[0]?.created_at || null,
+        lastSubmitAt: (lastRes.data as { created_at: string }[] | null)?.[0]?.created_at || null,
       });
     }
 
@@ -298,11 +291,9 @@ function PriceUpdaterInner() {
     const q = query.trim().toLowerCase();
     return products.filter((p) => {
       const okCat = cat === "all" ? true : p.category === cat;
-      const okQ =
-        !q
-          ? true
-          : p.name.toLowerCase().includes(q) ||
-            (p.slug || "").toLowerCase().includes(q);
+      const okQ = !q
+        ? true
+        : p.name.toLowerCase().includes(q) || (p.slug || "").toLowerCase().includes(q);
       return okCat && okQ;
     });
   }, [products, query, cat]);
@@ -310,29 +301,44 @@ function PriceUpdaterInner() {
   function pickExisting(p: DbProduct) {
     setToast(null);
 
-    const product_key = p.slug?.trim() ? p.slug.trim() : safeKey(`${p.category}-${p.name}`);
+    const product_key = p.slug?.trim()
+      ? p.slug.trim()
+      : safeKey(`${p.category}-${p.name}`);
 
-    const draft: UpdateDraft = {
+    if (isMobileViewport()) {
+      router.push(
+        `/price-updater/edit?mode=existing&id=${encodeURIComponent(
+          p.id
+        )}&key=${encodeURIComponent(product_key)}`
+      );
+      return;
+    }
+
+    setSelected({
       mode: "existing",
       product_id: p.id,
       product_key,
       category: p.category,
       name: p.name,
-
       origin_country: p.origin_country || "",
       packaging: p.packaging || "",
-
-      unit: p.unit || "", // ✅ keep in state (locked indirectly)
+      unit: p.unit || "",
       variety: "",
       price: p.market_price_aed != null ? String(p.market_price_aed) : "",
       currency: "AED",
-    };
-
-    setSelected(draft);
+      price_date: todayISO(),
+      price_time: nowTimeISO(),
+    });
   }
 
   function startNew() {
     setToast(null);
+
+    if (isMobileViewport()) {
+      router.push(`/price-updater/edit?mode=new`);
+      return;
+    }
+
     setSelected({
       mode: "new",
       product_key: "",
@@ -340,16 +346,15 @@ function PriceUpdaterInner() {
       name: "",
       origin_country: "",
       packaging: "",
-      unit: "", // ✅ new requires this
+      unit: "",
       variety: "",
       price: "",
       currency: "AED",
+      price_date: todayISO(),
+      price_time: nowTimeISO(),
     });
   }
 
-  // ---------------------------
-  // ✅ submit via API route (service role)
-  // ---------------------------
   async function submit() {
     if (!selected) return;
 
@@ -359,6 +364,18 @@ function PriceUpdaterInner() {
       return;
     }
 
+    if (!selected.price_date.trim()) {
+      setToast("Please choose the price date.");
+      return;
+    }
+
+    if (!selected.price_time.trim()) {
+      setToast("Please choose the price time.");
+      return;
+    }
+
+    let product_key = selected.product_key;
+
     if (selected.mode === "new") {
       if (!selected.name.trim()) return setToast("Product name is required.");
       if (!selected.category.trim()) return setToast("Category is required.");
@@ -366,7 +383,7 @@ function PriceUpdaterInner() {
       if (!selected.packaging.trim()) return setToast("Packaging is required.");
       if (!selected.unit.trim()) return setToast("Unit is required.");
 
-      selected.product_key = safeKey(
+      product_key = safeKey(
         `${selected.category}-${selected.name}-${selected.origin_country}-${selected.packaging}`
       );
     }
@@ -376,9 +393,7 @@ function PriceUpdaterInner() {
 
     try {
       const secret =
-        typeof window !== "undefined"
-          ? localStorage.getItem("updater_secret") || ""
-          : "";
+        typeof window !== "undefined" ? localStorage.getItem("updater_secret") || "" : "";
 
       if (!secret) {
         setToast("Missing updater secret. Please login again.");
@@ -389,18 +404,17 @@ function PriceUpdaterInner() {
       const payload = {
         mode: selected.mode,
         product_id: selected.product_id || null,
-        product_key: selected.product_key,
-
+        product_key,
         category: selected.category.trim(),
         name: selected.name.trim(),
-
         origin_country: selected.origin_country.trim(),
         packaging: selected.packaging.trim(),
         unit: selected.unit.trim(),
-
         variety: selected.variety.trim() || "",
         price: priceNum,
         currency: selected.currency || "AED",
+        price_date: selected.price_date,
+        price_time: selected.price_time,
       };
 
       const res = await fetch("/api/price-updates/submit", {
@@ -410,6 +424,7 @@ function PriceUpdaterInner() {
       });
 
       const json = await res.json().catch(() => ({}));
+
       if (!res.ok || !json?.ok) {
         throw new Error(json?.error || "Submit failed");
       }
@@ -417,7 +432,6 @@ function PriceUpdaterInner() {
       setToast("✅ Submitted for admin approval.");
       setSelected(null);
 
-      // refresh header stats after submit
       const supabase = safeSupabase();
       if (supabase && updater) {
         const start = todayStartISO();
@@ -440,8 +454,8 @@ function PriceUpdaterInner() {
           lastSubmitAt: new Date().toISOString(),
         }));
       }
-    } catch (e: any) {
-      setToast(e?.message || "Something went wrong.");
+    } catch (e: unknown) {
+      setToast(e instanceof Error ? e.message : "Something went wrong.");
     } finally {
       setSaving(false);
     }
@@ -455,9 +469,7 @@ function PriceUpdaterInner() {
   if (loading) {
     return (
       <main className="min-h-[calc(100vh-80px)] bg-[#f6f8f7] px-4 sm:px-6 lg:px-12 py-10">
-        <div className="max-w-[1100px] mx-auto text-[#111713] font-bold">
-          Loading…
-        </div>
+        <div className="max-w-[1100px] mx-auto text-[#111713] font-bold">Loading…</div>
       </main>
     );
   }
@@ -466,9 +478,7 @@ function PriceUpdaterInner() {
     return (
       <main className="min-h-[calc(100vh-80px)] bg-[#f6f8f7] px-4 sm:px-6 lg:px-12 py-10">
         <div className="max-w-[960px] mx-auto bg-white border border-[#e0e8e3] rounded-[28px] p-8 shadow-sm">
-          <div className="text-2xl font-black text-[#111713]">
-            Updater access required
-          </div>
+          <div className="text-2xl font-black text-[#111713]">Updater access required</div>
           <p className="mt-2 text-[#648770] font-semibold">
             {accessErr || "Open using a valid secret link."}
           </p>
@@ -486,24 +496,20 @@ function PriceUpdaterInner() {
   return (
     <main className="min-h-[calc(100vh-80px)] bg-[#f6f8f7] px-4 sm:px-6 lg:px-12 py-10">
       <div className="max-w-[1440px] mx-auto">
-        <div className="flex items-start justify-between gap-4 mb-6">
+        <div className="flex flex-col gap-4 mb-6 lg:flex-row lg:items-start lg:justify-between">
           <div>
-            <h1 className="text-3xl sm:text-4xl font-black text-[#111713]">
-              Price Updater
-            </h1>
-            <p className="mt-1 text-[#648770] font-semibold">
-              Updater: {updater.name}
-            </p>
+            <h1 className="text-3xl sm:text-4xl font-black text-[#111713]">Price Updater</h1>
+            <p className="mt-1 text-[#648770] font-semibold">Updater: {updater.name}</p>
           </div>
 
-          <div className="flex flex-col items-end gap-3">
-            <div className="flex items-center gap-2">
+          <div className="flex flex-col gap-3 lg:items-end">
+            <div className="flex flex-wrap items-center gap-2">
               <Pill label="My updates today" value={String(todayStats.mineToday)} />
               <Pill label="Total updates today" value={String(todayStats.totalToday)} />
               <Pill label="Date" value={todayISO()} />
             </div>
 
-            <div className="flex items-center gap-3">
+            <div className="flex flex-wrap items-center gap-3">
               <Link
                 href="/admin/price-approvals"
                 className="inline-flex items-center justify-center rounded-full h-11 px-5 bg-[#eef2f0] text-[#111713] font-black hover:bg-[#e7ecea] transition"
@@ -520,10 +526,9 @@ function PriceUpdaterInner() {
           </div>
         </div>
 
-        {/* Filters */}
         <div className="bg-white border border-[#e0e8e3] rounded-[28px] p-5 shadow-sm">
-          <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
-            <div className="sm:col-span-2">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+            <div className="md:col-span-2">
               <div className="text-xs font-black text-[#8aa59a] uppercase tracking-wide">
                 Search product
               </div>
@@ -569,15 +574,11 @@ function PriceUpdaterInner() {
           </div>
         )}
 
-        {/* List + form */}
         <div className="mt-6 grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Left list */}
           <div className="lg:col-span-2 bg-white border border-[#e0e8e3] rounded-[28px] overflow-hidden shadow-sm">
             <div className="p-5 border-b border-[#e0e8e3] flex items-center justify-between">
-              <div className="text-xl font-black text-[#111713]">
-                Products ({filtered.length})
-              </div>
-              <div className="text-sm font-semibold text-[#648770]">
+              <div className="text-xl font-black text-[#111713]">Products ({filtered.length})</div>
+              <div className="text-sm font-semibold text-[#648770] hidden sm:block">
                 Select to update price
               </div>
             </div>
@@ -587,13 +588,11 @@ function PriceUpdaterInner() {
                 <button
                   key={p.id}
                   onClick={() => pickExisting(p)}
-                  className="w-full text-left px-5 py-4 border-b border-[#eef2f0] hover:bg-[#f6f8f7] transition"
+                  className="w-full text-left px-5 py-4 border-b border-[#eef2f0] hover:bg-[#f6f8f7] active:scale-[0.998] transition"
                 >
                   <div className="flex items-center justify-between gap-4">
-                    <div>
-                      <div className="text-[#111713] font-black text-lg">
-                        {p.name}
-                      </div>
+                    <div className="min-w-0">
+                      <div className="text-[#111713] font-black text-lg truncate">{p.name}</div>
                       <div className="text-[#648770] font-semibold text-sm">
                         {p.category}
                         {" • "}Origin: {p.origin_country || "—"}
@@ -601,10 +600,8 @@ function PriceUpdaterInner() {
                       </div>
                     </div>
 
-                    <div className="text-right">
-                      <div className="text-xs font-black text-[#8aa59a] uppercase">
-                        Market
-                      </div>
+                    <div className="text-right shrink-0">
+                      <div className="text-xs font-black text-[#8aa59a] uppercase">Market</div>
                       <div className="text-[#111713] font-black">
                         {p.market_price_aed == null
                           ? "—"
@@ -616,15 +613,12 @@ function PriceUpdaterInner() {
               ))}
 
               {filtered.length === 0 && (
-                <div className="p-6 text-[#648770] font-semibold">
-                  No products found.
-                </div>
+                <div className="p-6 text-[#648770] font-semibold">No products found.</div>
               )}
             </div>
           </div>
 
-          {/* Right form */}
-          <div className="bg-white border border-[#e0e8e3] rounded-[28px] p-6 shadow-sm">
+          <div className="hidden lg:block bg-white border border-[#e0e8e3] rounded-[28px] p-6 shadow-sm">
             <div className="text-xl font-black text-[#111713]">Update Form</div>
             <p className="mt-1 text-[#648770] font-semibold text-sm">
               Existing products: origin + packaging are locked. Only price can change.
@@ -671,7 +665,9 @@ function PriceUpdaterInner() {
                     <Field label="Origin country">
                       <input
                         value={selected.origin_country}
-                        onChange={(e) => setSelected({ ...selected, origin_country: e.target.value })}
+                        onChange={(e) =>
+                          setSelected({ ...selected, origin_country: e.target.value })
+                        }
                         className="w-full h-12 px-4 rounded-[18px] border border-[#e0e8e3] bg-[#f6f8f7] font-semibold outline-none focus:ring-2 focus:ring-[#1db954]/30"
                         placeholder="e.g. India"
                       />
@@ -686,7 +682,6 @@ function PriceUpdaterInner() {
                       />
                     </Field>
 
-                    {/* ✅ Unit required by API for new */}
                     <Field label="Unit">
                       <input
                         value={selected.unit}
@@ -724,6 +719,26 @@ function PriceUpdaterInner() {
                     placeholder="e.g. 12.50"
                   />
                 </Field>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <Field label="Price Date">
+                    <input
+                      type="date"
+                      value={selected.price_date}
+                      onChange={(e) => setSelected({ ...selected, price_date: e.target.value })}
+                      className="w-full h-12 px-4 rounded-[18px] border border-[#e0e8e3] bg-[#f6f8f7] font-semibold outline-none focus:ring-2 focus:ring-[#1db954]/30"
+                    />
+                  </Field>
+
+                  <Field label="Price Time">
+                    <input
+                      type="time"
+                      value={selected.price_time}
+                      onChange={(e) => setSelected({ ...selected, price_time: e.target.value })}
+                      className="w-full h-12 px-4 rounded-[18px] border border-[#e0e8e3] bg-[#f6f8f7] font-semibold outline-none focus:ring-2 focus:ring-[#1db954]/30"
+                    />
+                  </Field>
+                </div>
 
                 <button
                   onClick={submit}

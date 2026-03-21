@@ -13,11 +13,17 @@ export async function POST(req: Request) {
     const secret = String(body?.secret || "").trim();
     const payload = body?.payload || null;
 
-    if (!secret) return NextResponse.json({ ok: false, error: "Missing secret" }, { status: 400 });
-    if (!payload) return NextResponse.json({ ok: false, error: "Missing payload" }, { status: 400 });
+    if (!secret) {
+      return NextResponse.json({ ok: false, error: "Missing secret" }, { status: 400 });
+    }
+
+    if (!payload) {
+      return NextResponse.json({ ok: false, error: "Missing payload" }, { status: 400 });
+    }
 
     const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
     const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+
     if (!url || !serviceKey) {
       return NextResponse.json(
         { ok: false, error: "Server not configured (missing SUPABASE_SERVICE_ROLE_KEY)" },
@@ -25,10 +31,12 @@ export async function POST(req: Request) {
       );
     }
 
-    const supabase = createClient(url, serviceKey, { auth: { persistSession: false } });
+    const supabase = createClient(url, serviceKey, {
+      auth: { persistSession: false },
+    });
 
-    // 1) Verify updater
     const secret_hash = sha256Hex(secret);
+
     const { data: upd, error: updErr } = await supabase
       .from("updaters")
       .select("id,name,is_active")
@@ -36,9 +44,13 @@ export async function POST(req: Request) {
       .eq("is_active", true)
       .maybeSingle();
 
-    if (updErr || !upd) return NextResponse.json({ ok: false, error: "Invalid / inactive secret" }, { status: 401 });
+    if (updErr || !upd) {
+      return NextResponse.json(
+        { ok: false, error: "Invalid / inactive secret" },
+        { status: 401 }
+      );
+    }
 
-    // 2) Validate required fields
     const mode = payload.mode === "new" ? "new" : "existing";
     const name = String(payload.name || "").trim();
     const category = String(payload.category || "").trim();
@@ -49,27 +61,59 @@ export async function POST(req: Request) {
     const currency = String(payload.currency || "AED").trim() || "AED";
     const priceNum = Number(payload.price);
 
+    const selectedDate = String(payload.price_date || "").trim();
+    const selectedTime = String(payload.price_time || "").trim();
+
     if (!Number.isFinite(priceNum) || priceNum <= 0) {
       return NextResponse.json({ ok: false, error: "Invalid price" }, { status: 400 });
     }
 
     if (!name || !category) {
-      return NextResponse.json({ ok: false, error: "Name and category are required" }, { status: 400 });
+      return NextResponse.json(
+        { ok: false, error: "Name and category are required" },
+        { status: 400 }
+      );
     }
 
-    // For NEW product, require origin + packaging + unit (you said these tags should be filled)
+    if (!selectedDate) {
+      return NextResponse.json({ ok: false, error: "Price date is required" }, { status: 400 });
+    }
+
+    if (!selectedTime) {
+      return NextResponse.json({ ok: false, error: "Price time is required" }, { status: 400 });
+    }
+
     if (mode === "new") {
-      if (!origin_country) return NextResponse.json({ ok: false, error: "Origin country required" }, { status: 400 });
-      if (!packaging) return NextResponse.json({ ok: false, error: "Packaging required" }, { status: 400 });
-      if (!unit) return NextResponse.json({ ok: false, error: "Unit required" }, { status: 400 });
+      if (!origin_country) {
+        return NextResponse.json({ ok: false, error: "Origin country required" }, { status: 400 });
+      }
+      if (!packaging) {
+        return NextResponse.json({ ok: false, error: "Packaging required" }, { status: 400 });
+      }
+      if (!unit) {
+        return NextResponse.json({ ok: false, error: "Unit required" }, { status: 400 });
+      }
     }
 
-    const product_key = String(payload.product_key || "").trim() || `${category}-${name}`.toLowerCase().replace(/\s+/g, "-").replace(/[^a-z0-9\-]/g, "");
+    const product_key =
+      String(payload.product_key || "").trim() ||
+      `${category}-${name}`
+        .toLowerCase()
+        .replace(/\s+/g, "-")
+        .replace(/[^a-z0-9\-]/g, "");
 
-    // 3) Insert into price_updates (pending)
+    const selectedDateTime = new Date(`${selectedDate}T${selectedTime}:00`);
+
+    if (Number.isNaN(selectedDateTime.getTime())) {
+      return NextResponse.json(
+        { ok: false, error: "Invalid selected date/time" },
+        { status: 400 }
+      );
+    }
+
     const insertRow = {
       submitted_by: upd.id,
-      submitted_by_email: null, // keep null since we're not using email auth
+      submitted_by_email: null,
       updater_name: upd.name,
 
       product_key,
@@ -78,8 +122,8 @@ export async function POST(req: Request) {
       name,
 
       variety: variety || null,
-      country: origin_country || null, // your table uses "country" column
-      origin_country: origin_country || null, // extra column we added (recommended)
+      country: origin_country || null,
+      origin_country: origin_country || null,
       packaging: packaging || null,
       unit: unit || null,
 
@@ -87,14 +131,22 @@ export async function POST(req: Request) {
       currency,
       image_url: null,
       status: "pending",
-      created_at: new Date().toISOString(),
+
+      // chosen date + time saved into normal column
+      created_at: selectedDateTime.toISOString(),
     };
 
     const { error: insErr } = await supabase.from("price_updates").insert(insertRow);
-    if (insErr) return NextResponse.json({ ok: false, error: insErr.message }, { status: 400 });
+
+    if (insErr) {
+      return NextResponse.json({ ok: false, error: insErr.message }, { status: 400 });
+    }
 
     return NextResponse.json({ ok: true });
-  } catch (e: any) {
-    return NextResponse.json({ ok: false, error: e?.message || "Unknown error" }, { status: 500 });
+  } catch (e: unknown) {
+    return NextResponse.json(
+      { ok: false, error: e instanceof Error ? e.message : "Unknown error" },
+      { status: 500 }
+    );
   }
 }
