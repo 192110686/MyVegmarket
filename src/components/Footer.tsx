@@ -58,6 +58,9 @@ export default function Footer() {
               <Link href="/services" className="hover:text-[#1db954]">
                 Help & Services
               </Link>
+              <Link href="/delete-account" className="hover:text-[#1db954]">
+                Delete Account
+              </Link>
             </div>
           </div>
 
