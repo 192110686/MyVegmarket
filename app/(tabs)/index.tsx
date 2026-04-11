@@ -1,98 +1,166 @@
-import { Image } from 'expo-image';
-import { Platform, StyleSheet } from 'react-native';
+import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
+import { useRouter } from "expo-router";
+import React from "react";
+import { Pressable, StyleSheet, Text, View } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 
-import { HelloWave } from '@/components/hello-wave';
-import ParallaxScrollView from '@/components/parallax-scroll-view';
-import { ThemedText } from '@/components/themed-text';
-import { ThemedView } from '@/components/themed-view';
-import { Link } from 'expo-router';
+export default function HomePage() {
+  const router = useRouter();
 
-export default function HomeScreen() {
   return (
-    <ParallaxScrollView
-      headerBackgroundColor={{ light: '#A1CEDC', dark: '#1D3D47' }}
-      headerImage={
-        <Image
-          source={require('@/assets/images/partial-react-logo.png')}
-          style={styles.reactLogo}
-        />
-      }>
-      <ThemedView style={styles.titleContainer}>
-        <ThemedText type="title">Welcome!</ThemedText>
-        <HelloWave />
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Step 1: Try it</ThemedText>
-        <ThemedText>
-          Edit <ThemedText type="defaultSemiBold">app/(tabs)/index.tsx</ThemedText> to see changes.
-          Press{' '}
-          <ThemedText type="defaultSemiBold">
-            {Platform.select({
-              ios: 'cmd + d',
-              android: 'cmd + m',
-              web: 'F12',
-            })}
-          </ThemedText>{' '}
-          to open developer tools.
-        </ThemedText>
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <Link href="/modal">
-          <Link.Trigger>
-            <ThemedText type="subtitle">Step 2: Explore</ThemedText>
-          </Link.Trigger>
-          <Link.Preview />
-          <Link.Menu>
-            <Link.MenuAction title="Action" icon="cube" onPress={() => alert('Action pressed')} />
-            <Link.MenuAction
-              title="Share"
-              icon="square.and.arrow.up"
-              onPress={() => alert('Share pressed')}
-            />
-            <Link.Menu title="More" icon="ellipsis">
-              <Link.MenuAction
-                title="Delete"
-                icon="trash"
-                destructive
-                onPress={() => alert('Delete pressed')}
-              />
-            </Link.Menu>
-          </Link.Menu>
-        </Link>
+    <SafeAreaView style={styles.safe} edges={["top"]}>
+      <View style={styles.screen}>
+        <View style={styles.banner}>
+          <View style={styles.logoCircle}>
+            <Ionicons name="leaf" size={28} color="#1E6B2A" />
+          </View>
 
-        <ThemedText>
-          {`Tap the Explore tab to learn more about what's included in this starter app.`}
-        </ThemedText>
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Step 3: Get a fresh start</ThemedText>
-        <ThemedText>
-          {`When you're ready, run `}
-          <ThemedText type="defaultSemiBold">npm run reset-project</ThemedText> to get a fresh{' '}
-          <ThemedText type="defaultSemiBold">app</ThemedText> directory. This will move the current{' '}
-          <ThemedText type="defaultSemiBold">app</ThemedText> to{' '}
-          <ThemedText type="defaultSemiBold">app-example</ThemedText>.
-        </ThemedText>
-      </ThemedView>
-    </ParallaxScrollView>
+          <Text style={styles.title}>MyVegmarket</Text>
+          <Text style={styles.subtitle}>
+            Daily Al Aweer market prices and container listings in one simple app.
+          </Text>
+
+          <View style={styles.badge}>
+            <Text style={styles.badgeText}>LIVE UAE MARKET TOOLS</Text>
+          </View>
+        </View>
+
+        <Text style={styles.sectionHeading}>Choose what you want to explore</Text>
+
+        <Pressable
+          style={styles.optionCard}
+          onPress={() => router.push("/prices" as any)}
+        >
+          <View style={styles.optionIconWrap}>
+            <MaterialCommunityIcons name="cash-multiple" size={26} color="#1E6B2A" />
+          </View>
+
+          <View style={styles.optionTextWrap}>
+            <Text style={styles.optionTitle}>Al Aweer Prices</Text>
+            <Text style={styles.optionSubtitle}>
+              Check daily market prices, categories, and product updates.
+            </Text>
+          </View>
+
+          <Ionicons name="chevron-forward" size={20} color="#94A3B8" />
+        </Pressable>
+
+        <Pressable
+          style={styles.optionCard}
+          onPress={() => router.push("/containers" as any)}
+        >
+          <View style={styles.optionIconWrap}>
+            <MaterialCommunityIcons
+              name="clipboard-text-outline"
+              size={26}
+              color="#1E6B2A"
+            />
+          </View>
+
+          <View style={styles.optionTextWrap}>
+            <Text style={styles.optionTitle}>Containers</Text>
+            <Text style={styles.optionSubtitle}>
+              Open container options and choose View Ads or Post Your Ad.
+            </Text>
+          </View>
+
+          <Ionicons name="chevron-forward" size={20} color="#94A3B8" />
+        </Pressable>
+      </View>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  titleContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
+  safe: {
+    flex: 1,
+    backgroundColor: "#F7F8F5",
   },
-  stepContainer: {
-    gap: 8,
-    marginBottom: 8,
+  screen: {
+    flex: 1,
+    padding: 16,
   },
-  reactLogo: {
-    height: 178,
-    width: 290,
-    bottom: 0,
-    left: 0,
-    position: 'absolute',
+  banner: {
+    backgroundColor: "#FFFFFF",
+    borderRadius: 28,
+    padding: 24,
+    borderWidth: 1,
+    borderColor: "#E7ECE8",
+    marginBottom: 24,
+    alignItems: "center",
+  },
+  logoCircle: {
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    backgroundColor: "#EEF3EC",
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: 16,
+  },
+  title: {
+    fontSize: 30,
+    fontWeight: "900",
+    color: "#1E6B2A",
+    textAlign: "center",
+  },
+  subtitle: {
+    marginTop: 10,
+    fontSize: 15,
+    lineHeight: 22,
+    color: "#667085",
+    textAlign: "center",
+    fontWeight: "500",
+  },
+  badge: {
+    marginTop: 18,
+    backgroundColor: "#E9F1E7",
+    borderRadius: 999,
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+  },
+  badgeText: {
+    color: "#2B6B2D",
+    fontSize: 12,
+    fontWeight: "800",
+  },
+  sectionHeading: {
+    fontSize: 18,
+    fontWeight: "800",
+    color: "#0F172A",
+    marginBottom: 14,
+  },
+  optionCard: {
+    backgroundColor: "#FFFFFF",
+    borderRadius: 24,
+    borderWidth: 1,
+    borderColor: "#E7ECE8",
+    padding: 18,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 14,
+    marginBottom: 14,
+  },
+  optionIconWrap: {
+    width: 54,
+    height: 54,
+    borderRadius: 18,
+    backgroundColor: "#F2F5F1",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  optionTextWrap: {
+    flex: 1,
+  },
+  optionTitle: {
+    fontSize: 18,
+    fontWeight: "800",
+    color: "#0F172A",
+  },
+  optionSubtitle: {
+    marginTop: 4,
+    fontSize: 14,
+    lineHeight: 20,
+    color: "#667085",
   },
 });

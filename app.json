@@ -1,17 +1,19 @@
 {
   "expo": {
-    "name": "myvegmarket-app",
-    "slug": "myvegmarket-app",
-    "version": "1.0.0",
+    "name": "MyVegmarket",
+    "slug": "MyVegmarket",
+    "version": "2.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
-    "scheme": "myvegmarketapp",
+    "scheme": "MyVegmarket",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "ios": {
+      "bundleIdentifier": "com.myvegmarket.app",
       "supportsTablet": true
     },
     "android": {
+      "package": "com.myvegmarket.app",
       "adaptiveIcon": {
         "backgroundColor": "#E6F4FE",
         "foregroundImage": "./assets/images/android-icon-foreground.png",
@@ -38,11 +40,18 @@
             "backgroundColor": "#000000"
           }
         }
-      ]
+      ],
+      "@react-native-community/datetimepicker"
     ],
     "experiments": {
       "typedRoutes": true,
       "reactCompiler": true
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "4d8d3403-41f6-4e70-8461-68a5f3717f84"
+      }
     }
   }
 }
