@@ -51,15 +51,47 @@ function buildAggMapFromRows(rows: any[]) {
 
   for (const r of rows ?? []) {
     const slug = String(r.product_key || "").trim();
+
     const price = Number(r.price);
+    const explicitMin =
+      r.min_price !== null && r.min_price !== undefined
+        ? Number(r.min_price)
+        : price;
+
+    const explicitMax =
+      r.max_price !== null && r.max_price !== undefined
+        ? Number(r.max_price)
+        : price;
+
     const t = (r.published_at || r.reviewed_at || null) as string | null;
 
-    if (!slug || !Number.isFinite(price)) continue;
+    if (
+      !slug ||
+      !Number.isFinite(price) ||
+      !Number.isFinite(explicitMin) ||
+      !Number.isFinite(explicitMax)
+    ) {
+      continue;
+    }
 
-    if (!map[slug]) map[slug] = { min: price, max: price, last: price, lastTime: t };
-    else {
-      map[slug].min = map[slug].min == null ? price : Math.min(map[slug].min, price);
-      map[slug].max = map[slug].max == null ? price : Math.max(map[slug].max, price);
+    if (!map[slug]) {
+      map[slug] = {
+        min: explicitMin,
+        max: explicitMax,
+        last: price,
+        lastTime: t,
+      };
+    } else {
+      map[slug].min =
+        map[slug].min == null
+          ? explicitMin
+          : Math.min(map[slug].min, explicitMin);
+
+      map[slug].max =
+        map[slug].max == null
+          ? explicitMax
+          : Math.max(map[slug].max, explicitMax);
+
       map[slug].last = price;
       map[slug].lastTime = t;
     }
@@ -102,7 +134,9 @@ export default async function AlAweerPricesPage({
     // 2a) Selected day agg (min/max/last)
     const { data: uData, error: uErr } = await supabase
       .from("price_updates")
-      .select("product_key,price,reviewed_at,published_at,status")
+      .select(
+  "product_key,price,min_price,max_price,reviewed_at,published_at,status,source"
+)
       .eq("status", "approved")
       .gte("published_at", startISO)
       .lte("published_at", endISO)
@@ -124,7 +158,9 @@ export default async function AlAweerPricesPage({
 
     const { data: cData, error: cErr } = await supabase
       .from("price_updates")
-      .select("product_key,price,reviewed_at,published_at,status")
+   .select(
+  "product_key,price,min_price,max_price,reviewed_at,published_at,status,source"
+)
       .eq("status", "approved")
       .gte("published_at", startCarryISO)
       .lte("published_at", endISO)
@@ -132,25 +168,62 @@ export default async function AlAweerPricesPage({
       .limit(20000);
 
     if (!cErr) {
-      // Build latest-per-slug, then convert to DayAgg (min=max=last=latest for carry)
-      const latestMap: Record<string, { price: number; time: string | null }> = {};
-
-      for (const r of (cData as any[]) ?? []) {
-        const slug = String(r.product_key || "").trim();
-        const price = Number(r.price);
-        const t = (r.published_at || r.reviewed_at || null) as string | null;
-
-        if (!slug || !Number.isFinite(price)) continue;
-        if (latestMap[slug]) continue; // already got latest due to DESC order
-        latestMap[slug] = { price, time: t };
-      }
-
-      const out: Record<string, DayAgg> = {};
-      for (const [slug, v] of Object.entries(latestMap)) {
-        out[slug] = { min: v.price, max: v.price, last: v.price, lastTime: v.time };
-      }
-      carryAggBySlug = out;
+  const latestMap: Record<
+    string,
+    {
+      price: number;
+      min: number;
+      max: number;
+      time: string | null;
     }
+  > = {};
+
+  for (const r of (cData as any[]) ?? []) {
+    const slug = String(r.product_key || "").trim();
+    const price = Number(r.price);
+
+    const min =
+      r.min_price !== null && r.min_price !== undefined
+        ? Number(r.min_price)
+        : price;
+
+    const max =
+      r.max_price !== null && r.max_price !== undefined
+        ? Number(r.max_price)
+        : price;
+
+    const t = (r.published_at || r.reviewed_at || null) as string | null;
+
+    if (!slug) continue;
+    if (!Number.isFinite(price)) continue;
+    if (!Number.isFinite(min)) continue;
+    if (!Number.isFinite(max)) continue;
+
+    // Data is already ordered newest first.
+    // Keep only the latest approved row for each product.
+    if (latestMap[slug]) continue;
+
+    latestMap[slug] = {
+      price,
+      min,
+      max,
+      time: t,
+    };
+  }
+
+  const out: Record<string, DayAgg> = {};
+
+  for (const [slug, v] of Object.entries(latestMap)) {
+    out[slug] = {
+      min: v.min,
+      max: v.max,
+      last: v.price,
+      lastTime: v.time,
+    };
+  }
+
+  carryAggBySlug = out;
+}
   }
 
   return (

@@ -556,8 +556,13 @@ export default function AdminPriceApprovalsPage() {
               Track updater activity + approve/reject submissions
             </p>
           </div>
-
           <div className="flex items-center gap-3">
+            <Link
+  href="/admin/bulk-price-import"
+  className="inline-flex items-center justify-center rounded-full h-11 px-5 bg-[#1db954] text-white font-black shadow-[0_10px_25px_rgba(29,185,84,0.20)] hover:brightness-110 transition"
+>
+  Bulk Price Import
+</Link>
             <button
               onClick={signOut}
               className="inline-flex items-center justify-center rounded-full h-11 px-5 bg-white border border-[#e0e8e3] text-[#111713] font-black hover:bg-[#f6f8f7] transition"
