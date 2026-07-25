@@ -1,20 +1,68 @@
 "use client";
 
-import React, { useEffect, useMemo, useRef, useState } from "react";
+import React, {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import {
-  createChart,
+  AreaSeries,
+  CrosshairMode,
   LineSeries,
+  type BusinessDay,
   type IChartApi,
   type ISeriesApi,
-  CrosshairMode,
-  type BusinessDay,
+  type Time,
   type UTCTimestamp,
+  createChart,
 } from "lightweight-charts";
 
-export type TVPoint = { time: string; value: number }; // "YYYY-MM-DD"
+export type TVPoint = {
+  time: string;
+  value: number;
+};
 
-type RangeKey = "1D" | "1W" | "1M" | "3M" | "6M" | "1Y" | "MAX";
+export type RangeKey =
+  | "1D"
+  | "1W"
+  | "1M"
+  | "3M"
+  | "6M"
+  | "1Y"
+  | "52W"
+  | "ALL"
+  | "MAX";
+
 type ViewMode = "MY" | "MARKET" | "COMPARE";
+type PriceMode = "ABS" | "PCT";
+type BucketUnit = "RAW" | "DAY" | "WEEK" | "MONTH" | "YEAR";
+
+export type AggregatedPricePoint = {
+  time: UTCTimestamp;
+  sourceTime: string;
+  open: number;
+  high: number;
+  low: number;
+  close: number;
+  average: number;
+  median: number;
+  updateCount: number;
+};
+
+export type VisiblePriceStats = {
+  from: string;
+  to: string;
+  current: number | null;
+  average: number | null;
+  high: number | null;
+  low: number | null;
+  median: number | null;
+  updateCount: number;
+  change: number | null;
+  changePercent: number | null;
+};
 
 type Props = {
   title: string;
@@ -23,456 +71,680 @@ type Props = {
   height?: number;
   range: RangeKey;
   onAvgTextChange?: (text: string) => void;
+  onVisibleStatsChange?: (stats: VisiblePriceStats | null) => void;
 };
 
-/** ---------- small helpers ---------- */
-function clamp(n: number, min: number, max: number) {
-  return Math.max(min, Math.min(max, n));
-}
-function isISODateOnly(s: string) {
-  return /^\d{4}-\d{2}-\d{2}$/.test(s);
+type CleanPoint = {
+  time: UTCTimestamp;
+  sourceTime: string;
+  value: number;
+};
+
+const EMPTY_STATS: VisiblePriceStats = {
+  from: "",
+  to: "",
+  current: null,
+  average: null,
+  high: null,
+  low: null,
+  median: null,
+  updateCount: 0,
+  change: null,
+  changePercent: null,
+};
+
+function clamp(value: number, min: number, max: number) {
+  return Math.max(min, Math.min(max, value));
 }
 
-function toUTCTimestampSeconds(timeStr: string): UTCTimestamp {
-  // Supports YYYY-MM-DD and full ISO
-  if (isISODateOnly(timeStr)) {
-    // interpret as UTC midnight
-    const [y, m, d] = timeStr.split("-").map(Number);
-    const ms = Date.UTC(y, m - 1, d, 0, 0, 0, 0);
-    return Math.floor(ms / 1000) as UTCTimestamp;
+function isDateOnly(value: string) {
+  return /^\d{4}-\d{2}-\d{2}$/.test(value);
+}
+
+function parseTime(value: string): UTCTimestamp | null {
+  if (!value) return null;
+
+  if (isDateOnly(value)) {
+    const [year, month, day] = value.split("-").map(Number);
+    const seconds = Date.UTC(year, month - 1, day, 0, 0, 0) / 1000;
+    return Number.isFinite(seconds) ? (seconds as UTCTimestamp) : null;
   }
 
-  const ms = new Date(timeStr).getTime();
-  // fallback: if invalid, treat as now (prevents crashes)
-  const safeMs = Number.isFinite(ms) ? ms : Date.now();
-  return Math.floor(safeMs / 1000) as UTCTimestamp;
-}
-function parseBusinessDay(yyyy_mm_dd: string): BusinessDay {
-  const [y, m, d] = yyyy_mm_dd.split("-").map(Number);
-  return { year: y, month: m, day: d };
+  const milliseconds = new Date(value).getTime();
+  if (!Number.isFinite(milliseconds)) return null;
+
+  return Math.floor(milliseconds / 1000) as UTCTimestamp;
 }
 
-function toISODate(dt: Date) {
-  const yyyy = dt.getFullYear();
-  const mm = String(dt.getMonth() + 1).padStart(2, "0");
-  const dd = String(dt.getDate()).padStart(2, "0");
-  return `${yyyy}-${mm}-${dd}`;
+function cleanSeries(points: TVPoint[]): CleanPoint[] {
+  const byTimestamp = new Map<number, CleanPoint>();
+
+  for (const point of points ?? []) {
+    const time = parseTime(point.time);
+    const value = Number(point.value);
+
+    if (time == null || !Number.isFinite(value) || value <= 0) continue;
+
+    byTimestamp.set(Number(time), {
+      time,
+      sourceTime: point.time,
+      value,
+    });
+  }
+
+  return [...byTimestamp.values()].sort(
+    (first, second) => Number(first.time) - Number(second.time),
+  );
 }
 
-function addDays(dateStr: string, days: number): string {
-  const [y, m, d] = dateStr.split("-").map(Number);
-  const dt = new Date(y, m - 1, d);
-  dt.setDate(dt.getDate() + days);
-  return toISODate(dt);
+function median(values: number[]) {
+  if (!values.length) return 0;
+
+  const sorted = [...values].sort((a, b) => a - b);
+  const middle = Math.floor(sorted.length / 2);
+
+  if (sorted.length % 2 === 0) {
+    return (sorted[middle - 1] + sorted[middle]) / 2;
+  }
+
+  return sorted[middle];
 }
 
-function addMonths(dateStr: string, months: number): string {
-  const [y, m, d] = dateStr.split("-").map(Number);
-  const dt = new Date(y, m - 1, d);
-  dt.setMonth(dt.getMonth() + months);
-  // normalize to 1st day for month points
-  return toISODate(new Date(dt.getFullYear(), dt.getMonth(), 1));
+function startOfUtcDay(timestamp: UTCTimestamp): UTCTimestamp {
+  const date = new Date(Number(timestamp) * 1000);
+  return Math.floor(
+    Date.UTC(
+      date.getUTCFullYear(),
+      date.getUTCMonth(),
+      date.getUTCDate(),
+    ) / 1000,
+  ) as UTCTimestamp;
 }
 
-function startOfDayISO(dateStr: string) {
-  // already YYYY-MM-DD, keep as is
-  return dateStr.slice(0, 10);
+function startOfUtcWeek(timestamp: UTCTimestamp): UTCTimestamp {
+  const dayStart = startOfUtcDay(timestamp);
+  const date = new Date(Number(dayStart) * 1000);
+  const weekday = date.getUTCDay();
+  const daysFromMonday = weekday === 0 ? 6 : weekday - 1;
+
+  return (Number(dayStart) - daysFromMonday * 86_400) as UTCTimestamp;
 }
 
-function startOfMonthISO(dateStr: string) {
-  const [y, m] = dateStr.slice(0, 7).split("-").map(Number);
-  return `${y}-${String(m).padStart(2, "0")}-01`;
+function startOfUtcMonth(timestamp: UTCTimestamp): UTCTimestamp {
+  const date = new Date(Number(timestamp) * 1000);
+
+  return Math.floor(
+    Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), 1) / 1000,
+  ) as UTCTimestamp;
 }
 
-function sortByTime(series: TVPoint[]) {
-  return [...(series ?? [])].sort((a, b) => a.time.localeCompare(b.time));
+function startOfUtcYear(timestamp: UTCTimestamp): UTCTimestamp {
+  const date = new Date(Number(timestamp) * 1000);
+
+  return Math.floor(
+    Date.UTC(date.getUTCFullYear(), 0, 1) / 1000,
+  ) as UTCTimestamp;
 }
 
-function rangeToDays(r: RangeKey) {
-  switch (r) {
+function bucketStart(
+  timestamp: UTCTimestamp,
+  unit: BucketUnit,
+): UTCTimestamp {
+  switch (unit) {
+    case "DAY":
+      return startOfUtcDay(timestamp);
+    case "WEEK":
+      return startOfUtcWeek(timestamp);
+    case "MONTH":
+      return startOfUtcMonth(timestamp);
+    case "YEAR":
+      return startOfUtcYear(timestamp);
+    case "RAW":
+    default:
+      return timestamp;
+  }
+}
+
+function unitForRange(range: RangeKey): BucketUnit {
+  switch (range) {
     case "1D":
-      return 1;
+      return "RAW";
+    case "1W":
+    case "1M":
+      return "DAY";
+    case "3M":
+    case "6M":
+    case "52W":
+      return "WEEK";
+    case "1Y":
+      return "MONTH";
+    case "ALL":
+    case "MAX":
+      return "MONTH";
+    default:
+      return "DAY";
+  }
+}
+
+function aggregateSeries(
+  points: CleanPoint[],
+  unit: BucketUnit,
+): AggregatedPricePoint[] {
+  if (!points.length) return [];
+
+  if (unit === "RAW") {
+    return points.map((point) => ({
+      time: point.time,
+      sourceTime: point.sourceTime,
+      open: point.value,
+      high: point.value,
+      low: point.value,
+      close: point.value,
+      average: point.value,
+      median: point.value,
+      updateCount: 1,
+    }));
+  }
+
+  const groups = new Map<number, CleanPoint[]>();
+
+  for (const point of points) {
+    const key = Number(bucketStart(point.time, unit));
+    const current = groups.get(key) ?? [];
+    current.push(point);
+    groups.set(key, current);
+  }
+
+  return [...groups.entries()]
+    .sort(([first], [second]) => first - second)
+    .map(([time, group]) => {
+      const sorted = [...group].sort(
+        (first, second) => Number(first.time) - Number(second.time),
+      );
+      const values = sorted.map((point) => point.value);
+      const total = values.reduce((sum, value) => sum + value, 0);
+
+      return {
+        time: time as UTCTimestamp,
+        sourceTime: sorted[sorted.length - 1].sourceTime,
+        open: sorted[0].value,
+        high: Math.max(...values),
+        low: Math.min(...values),
+        close: sorted[sorted.length - 1].value,
+        average: total / values.length,
+        median: median(values),
+        updateCount: values.length,
+      };
+    });
+}
+
+function toPercentSeries(points: AggregatedPricePoint[]) {
+  if (!points.length) return [];
+
+  const base = points[0].close;
+  if (!Number.isFinite(base) || base === 0) return [];
+
+  return points.map((point) => ({
+    time: point.time,
+    value: ((point.close - base) / base) * 100,
+  }));
+}
+
+function toPriceSeries(points: AggregatedPricePoint[]) {
+  return points.map((point) => ({
+    time: point.time,
+    value: point.close,
+  }));
+}
+
+function timeToSeconds(time: Time): number | null {
+  if (typeof time === "number") return time;
+
+  if (typeof time === "string") {
+    return parseTime(time);
+  }
+
+  const businessDay = time as BusinessDay;
+  const seconds =
+    Date.UTC(
+      businessDay.year,
+      businessDay.month - 1,
+      businessDay.day,
+    ) / 1000;
+
+  return Number.isFinite(seconds) ? seconds : null;
+}
+
+function formatAED(value: number | null) {
+  if (value == null || !Number.isFinite(value)) return "-";
+  return `AED ${value.toFixed(2)}`;
+}
+
+function formatPercent(value: number | null) {
+  if (value == null || !Number.isFinite(value)) return "-";
+  const sign = value > 0 ? "+" : "";
+  return `${sign}${value.toFixed(2)}%`;
+}
+
+function formatDateTime(timestamp: number) {
+  const date = new Date(timestamp * 1000);
+
+  return date.toLocaleString("en-GB", {
+    timeZone: "Asia/Dubai",
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: true,
+  });
+}
+
+function formatDate(timestamp: number) {
+  const date = new Date(timestamp * 1000);
+
+  return date.toLocaleDateString("en-GB", {
+    timeZone: "UTC",
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+  });
+}
+
+function getIsoWeek(timestamp: number) {
+  const date = new Date(timestamp * 1000);
+  const target = new Date(
+    Date.UTC(
+      date.getUTCFullYear(),
+      date.getUTCMonth(),
+      date.getUTCDate(),
+    ),
+  );
+
+  const dayNumber = target.getUTCDay() || 7;
+  target.setUTCDate(target.getUTCDate() + 4 - dayNumber);
+
+  const yearStart = new Date(Date.UTC(target.getUTCFullYear(), 0, 1));
+  return Math.ceil(
+    ((target.getTime() - yearStart.getTime()) / 86_400_000 + 1) / 7,
+  );
+}
+
+function visibleDurationDays(
+  from: Time | undefined,
+  to: Time | undefined,
+) {
+  if (from == null || to == null) return null;
+
+  const fromSeconds = timeToSeconds(from);
+  const toSeconds = timeToSeconds(to);
+
+  if (fromSeconds == null || toSeconds == null) return null;
+
+  return Math.abs(toSeconds - fromSeconds) / 86_400;
+}
+
+function createDynamicTickFormatter(
+  visibleDurationRef: React.MutableRefObject<number | null>,
+) {
+  return (time: Time) => {
+    const seconds = timeToSeconds(time);
+    if (seconds == null) return "";
+
+    const date = new Date(seconds * 1000);
+    const visibleDays = visibleDurationRef.current ?? 30;
+
+    if (visibleDays <= 2) {
+      return date.toLocaleTimeString("en-US", {
+        timeZone: "Asia/Dubai",
+        hour: "numeric",
+        minute: "2-digit",
+        hour12: true,
+      });
+    }
+
+    if (visibleDays <= 10) {
+      return date.toLocaleDateString("en-US", {
+        timeZone: "UTC",
+        weekday: "short",
+      });
+    }
+
+    if (visibleDays <= 45) {
+      return date.toLocaleDateString("en-US", {
+        timeZone: "UTC",
+        day: "numeric",
+        month: "short",
+      });
+    }
+
+    if (visibleDays <= 400) {
+      return `W${String(getIsoWeek(seconds)).padStart(2, "0")}`;
+    }
+
+    if (visibleDays <= 1_500) {
+      return date.toLocaleDateString("en-US", {
+        timeZone: "UTC",
+        month: "short",
+        year: "2-digit",
+      });
+    }
+
+    return String(date.getUTCFullYear());
+  };
+}
+
+function calculateVisibleStats(
+  rawPoints: CleanPoint[],
+  from: Time,
+  to: Time,
+): VisiblePriceStats | null {
+  const fromSeconds = timeToSeconds(from);
+  const toSeconds = timeToSeconds(to);
+
+  if (fromSeconds == null || toSeconds == null) return null;
+
+  const lower = Math.min(fromSeconds, toSeconds);
+  const upper = Math.max(fromSeconds, toSeconds);
+
+  const visible = rawPoints.filter(
+    (point) =>
+      Number(point.time) >= lower && Number(point.time) <= upper,
+  );
+
+  if (!visible.length) return null;
+
+  const values = visible.map((point) => point.value);
+  const first = visible[0].value;
+  const current = visible[visible.length - 1].value;
+  const change = current - first;
+  const changePercent = first === 0 ? null : (change / first) * 100;
+
+  return {
+    from: visible[0].sourceTime,
+    to: visible[visible.length - 1].sourceTime,
+    current,
+    average:
+      values.reduce((sum, value) => sum + value, 0) / values.length,
+    high: Math.max(...values),
+    low: Math.min(...values),
+    median: median(values),
+    updateCount: visible.length,
+    change,
+    changePercent,
+  };
+}
+
+function visibleBarsForRange(range: RangeKey) {
+  switch (range) {
+    case "1D":
+      return 20;
     case "1W":
       return 7;
     case "1M":
       return 30;
+    case "3M":
+      return 13;
+    case "6M":
+      return 26;
+    case "1Y":
+      return 12;
+    case "52W":
+      return 52;
+    case "ALL":
+    case "MAX":
+      return null;
     default:
       return 30;
   }
-}
-
-function rangeToMonths(r: RangeKey) {
-  switch (r) {
-    case "3M":
-      return 3;
-    case "6M":
-      return 6;
-    case "1Y":
-      return 12;
-    default:
-      return 0;
-  }
-}
-
-/** ---------- build series for the selected range ---------- */
-/**
- * ✅ Daily ranges -> daily points (fills missing days using carry-forward)
- * ✅ Monthly ranges -> 1 point per month (latest value in that month)
- *
- * IMPORTANT: For monthly ranges, we keep ALL months available (so dragging left/right works)
- */
-function normalizeForRange(range: RangeKey, raw: TVPoint[]): TVPoint[] {
-  const s = sortByTime(raw);
-  if (!s.length) return [];
-
-  const isDaily = range === "1D" || range === "1W" || range === "1M";
-
-if (isDaily) {
-  // ✅ Keep ALL intraday points (ISO timestamps), but still allow carry-forward gaps
-  // If data is date-only, it will still work.
-  const out: TVPoint[] = [];
-
-  // First, keep all existing points (sorted)
-  for (const p of s) out.push({ time: p.time, value: p.value });
-
-  // If points are date-only (no time), we can still fill missing days
-  // But if points are full ISO, filling every day with fake points would add noise,
-  // so we only fill for date-only datasets.
-  const dateOnly = s.every((p) => isISODateOnly(startOfDayISO(p.time)));
-
-  if (!dateOnly) return out;
-
-  const dayMap = new Map<string, number>();
-  for (const p of s) dayMap.set(startOfDayISO(p.time), p.value);
-
-  const first = startOfDayISO(s[0].time);
-  const last = startOfDayISO(s[s.length - 1].time);
-
-  const filled: TVPoint[] = [];
-  let cur = first;
-  let carry = dayMap.get(first) ?? s[0].value;
-
-  for (let i = 0; i < 5000; i++) {
-    const v = dayMap.get(cur);
-    if (typeof v === "number") carry = v;
-    filled.push({ time: cur, value: carry });
-    if (cur === last) break;
-    cur = addDays(cur, 1);
-  }
-  return filled;
-}
-
-  // Monthly (3M/6M/1Y/MAX) -> latest point per month
-  const monthMap = new Map<string, TVPoint>(); // monthStart -> latest point
-  for (const p of s) {
-    const m0 = startOfMonthISO(p.time);
-    const prev = monthMap.get(m0);
-    if (!prev || prev.time < p.time) monthMap.set(m0, { time: m0, value: p.value });
-  }
-
-  // build continuous months from first month..last month so panning is smooth
-  const firstMonth = startOfMonthISO(s[0].time);
-  const lastMonth = startOfMonthISO(s[s.length - 1].time);
-
-  const out: TVPoint[] = [];
-  let cur = firstMonth;
-  let carry = monthMap.get(cur)?.value ?? s[0].value;
-
-  for (let i = 0; i < 240; i++) {
-    const got = monthMap.get(cur);
-    if (got) carry = got.value;
-    out.push({ time: cur, value: carry });
-    if (cur === lastMonth) break;
-    cur = addMonths(cur, 1);
-  }
-  return out;
-}
-
-/** ---------- percentage mode ---------- */
-function toPct(data: TVPoint[]) {
-  if (!data.length) return data;
-  const base = data[0].value || 1;
-  return data.map((p) => ({
-    time: p.time,
-    value: ((p.value - base) / base) * 100,
-  }));
-}
-
-/** ---------- avg calc helpers ---------- */
-function buildIndex(series: TVPoint[]) {
-  const t: number[] = [];
-  const ps: number[] = [0];
-  for (let i = 0; i < series.length; i++) {
-    const ms = new Date(series[i].time).getTime();
-    t.push(ms);
-    ps.push(ps[i] + series[i].value);
-  }
-  return { t, ps };
-}
-
-function lowerBound(arr: number[], x: number) {
-  let lo = 0,
-    hi = arr.length;
-  while (lo < hi) {
-    const mid = (lo + hi) >> 1;
-    if (arr[mid] < x) lo = mid + 1;
-    else hi = mid;
-  }
-  return lo;
-}
-
-function upperBound(arr: number[], x: number) {
-  let lo = 0,
-    hi = arr.length;
-  while (lo < hi) {
-    const mid = (lo + hi) >> 1;
-    if (arr[mid] <= x) lo = mid + 1;
-    else hi = mid;
-  }
-  return lo;
-}
-
-function timeToMs(t: any): number | null {
-  if (!t) return null;
-
-  if (typeof t === "string") {
-    const ms = new Date(t).getTime();
-    return Number.isFinite(ms) ? ms : null;
-  }
-
-  if (typeof t === "number") return t * 1000;
-
-  if (typeof t === "object" && "year" in t && "month" in t && "day" in t) {
-    const ms = Date.UTC(t.year, t.month - 1, t.day);
-    return Number.isFinite(ms) ? ms : null;
-  }
-
-  return null;
-}
-
-function avgInRange(index: { t: number[]; ps: number[] }, from: any, to: any): number | null {
-  const fromMs = timeToMs(from);
-  const toMs = timeToMs(to);
-  if (fromMs == null || toMs == null) return null;
-
-  const loMs = Math.min(fromMs, toMs);
-  const hiMs = Math.max(fromMs, toMs);
-
-  const l = lowerBound(index.t, loMs);
-  const r = upperBound(index.t, hiMs);
-  const count = r - l;
-  if (!count) return null;
-
-  const sum = index.ps[r] - index.ps[l];
-  return sum / count;
-}
-
-function formatAED(v: number) {
-  if (!Number.isFinite(v)) return "-";
-  return `AED ${v.toFixed(2)}`;
-}
-
-function formatPct(v: number) {
-  if (!Number.isFinite(v)) return "-";
-  const sign = v > 0 ? "+" : "";
-  return `${sign}${v.toFixed(2)}%`;
-}
-
-function formatTimePill(t: any) {
-  if (!t) return "";
-  if (typeof t === "object" && "year" in t && "month" in t && "day" in t) {
-    const d = new Date(t.year, t.month - 1, t.day);
-    return d.toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" });
-  }
-  if (typeof t === "number") {
-    const d = new Date(t * 1000);
-    return d.toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" });
-  }
-  if (typeof t === "string") return t;
-  return String(t);
-}
-
-function timeToDate(time: any): Date {
-  if (typeof time === "number") return new Date(time * 1000);
-  if (typeof time === "string") return new Date(time);
-  return new Date(time.year, (time.month ?? 1) - 1, time.day ?? 1);
-}
-
-/** ✅ Make labels never look “empty”: give each tick enough pixels */
-function pxPerPoint(range: RangeKey) {
-  if (range === "1W") return 90; // Mon Tue Wed...
-  if (range === "1M") return 40; // 1..30
-  if (range === "3M") return 140;
-  if (range === "6M") return 110;
-  if (range === "1Y") return 90;
-  return 55; // MAX
-}
-
-function visiblePointCount(range: RangeKey) {
-  if (range === "1D") return 1;
-  if (range === "1W") return 7;
-  if (range === "1M") return 30;
-  if (range === "3M") return 3;
-  if (range === "6M") return 6;
-  if (range === "1Y") return 12;
-  return 24; // MAX default visible
 }
 
 export default function ProductTrendTVChart({
   title,
   myveg,
-  market,
+  market = [],
   height = 430,
   range,
   onAvgTextChange,
+  onVisibleStatsChange,
 }: Props) {
   const wrapperRef = useRef<HTMLDivElement | null>(null);
   const containerRef = useRef<HTMLDivElement | null>(null);
 
   const chartRef = useRef<IChartApi | null>(null);
-  const myRef = useRef<ISeriesApi<"Line"> | null>(null);
-  const marketRef = useRef<ISeriesApi<"Line"> | null>(null);
+  const mySeriesRef = useRef<ISeriesApi<"Area"> | null>(null);
+  const marketSeriesRef = useRef<ISeriesApi<"Line"> | null>(null);
 
-  const topLabelRef = useRef<HTMLDivElement | null>(null);
-  const bottomTimeRef = useRef<HTMLDivElement | null>(null);
+  const tooltipRef = useRef<HTMLDivElement | null>(null);
+  const timeTooltipRef = useRef<HTMLDivElement | null>(null);
 
-  const hasMy = (myveg ?? []).length > 0;
-  const hasMk = (market ?? []).length > 0;
-  const defaultView: ViewMode = hasMy && hasMk ? "COMPARE" : hasMk ? "MARKET" : "MY";
+  const rawMyRef = useRef<CleanPoint[]>([]);
+  const rawMarketRef = useRef<CleanPoint[]>([]);
+  const aggregatedMyRef = useRef<AggregatedPricePoint[]>([]);
+  const aggregatedMarketRef = useRef<AggregatedPricePoint[]>([]);
 
-  const [view, setView] = useState<ViewMode>(defaultView);
-  const [mode, setMode] = useState<"ABS" | "PCT">("ABS");
+  const viewRef = useRef<ViewMode>("MY");
+  const modeRef = useRef<PriceMode>("ABS");
+  const visibleDurationRef = useRef<number | null>(null);
+  const animationFrameRef = useRef<number | null>(null);
+  const lastAverageTextRef = useRef("");
+  const lastStatsSignatureRef = useRef("");
 
-  /** ✅ 1) Normalize raw data to DAILY or MONTHLY based on range */
-  const myAbs = useMemo(() => normalizeForRange(range, myveg ?? []), [range, myveg]);
-  const mkAbs = useMemo(() => normalizeForRange(range, market ?? []), [range, market]);
+  const cleanMy = useMemo(() => cleanSeries(myveg), [myveg]);
+  const cleanMarket = useMemo(() => cleanSeries(market), [market]);
+  const bucketUnit = useMemo(() => unitForRange(range), [range]);
 
-  const mySeries = useMemo(() => (mode === "PCT" ? toPct(myAbs) : myAbs), [mode, myAbs]);
-  const mkSeries = useMemo(() => (mode === "PCT" ? toPct(mkAbs) : mkAbs), [mode, mkAbs]);
+  const aggregatedMy = useMemo(
+    () => aggregateSeries(cleanMy, bucketUnit),
+    [cleanMy, bucketUnit],
+  );
 
-  const myIdx = useMemo(() => buildIndex(myAbs), [myAbs]);
-  const mkIdx = useMemo(() => buildIndex(mkAbs), [mkAbs]);
+  const aggregatedMarket = useMemo(
+    () => aggregateSeries(cleanMarket, bucketUnit),
+    [cleanMarket, bucketUnit],
+  );
 
-  const lastAvgTextRef = useRef<string>("");
-  const rafRef = useRef<number | null>(null);
+  const hasMy = cleanMy.length > 0;
+  const hasMarket = cleanMarket.length > 0;
 
-  /** ✅ chart width so ALL labels are visible, and wrapper becomes scrollable */
-  const [chartWidth, setChartWidth] = useState<number | null>(null);
+  const initialView: ViewMode =
+    hasMy && hasMarket ? "COMPARE" : hasMarket ? "MARKET" : "MY";
 
-  const pushAvgText = () => {
+  const [view, setView] = useState<ViewMode>(initialView);
+  const [mode, setMode] = useState<PriceMode>("ABS");
+  const [visibleStats, setVisibleStats] =
+    useState<VisiblePriceStats | null>(null);
+
+  useEffect(() => {
+    if (view === "MY" && !hasMy && hasMarket) setView("MARKET");
+    if (view === "MARKET" && !hasMarket && hasMy) setView("MY");
+    if (view === "COMPARE" && !(hasMy && hasMarket)) {
+      setView(hasMarket ? "MARKET" : "MY");
+    }
+  }, [hasMarket, hasMy, view]);
+
+  useEffect(() => {
+    rawMyRef.current = cleanMy;
+    rawMarketRef.current = cleanMarket;
+    aggregatedMyRef.current = aggregatedMy;
+    aggregatedMarketRef.current = aggregatedMarket;
+  }, [aggregatedMarket, aggregatedMy, cleanMarket, cleanMy]);
+
+  useEffect(() => {
+    viewRef.current = view;
+  }, [view]);
+
+  useEffect(() => {
+    modeRef.current = mode;
+  }, [mode]);
+
+  const publishVisibleStats = useCallback(() => {
     const chart = chartRef.current;
     if (!chart) return;
 
-    const vr = chart.timeScale().getVisibleRange();
-    if (!vr) return;
+    const visibleRange = chart.timeScale().getVisibleRange();
+    if (!visibleRange) return;
+
+    visibleDurationRef.current = visibleDurationDays(
+      visibleRange.from,
+      visibleRange.to,
+    );
+
+    const activeRaw =
+      viewRef.current === "MARKET"
+        ? rawMarketRef.current
+        : rawMyRef.current.length
+          ? rawMyRef.current
+          : rawMarketRef.current;
+
+    const stats = calculateVisibleStats(
+      activeRaw,
+      visibleRange.from,
+      visibleRange.to,
+    );
+
+    const nextStats = stats ?? EMPTY_STATS;
+    const signature = JSON.stringify(nextStats);
+
+    if (signature !== lastStatsSignatureRef.current) {
+      lastStatsSignatureRef.current = signature;
+      setVisibleStats(stats);
+      onVisibleStatsChange?.(stats);
+    }
 
     const parts: string[] = [];
-    if (view !== "MARKET" && myAbs.length) {
-      const a = avgInRange(myIdx, vr.from, vr.to);
-      parts.push(`MyVeg Avg: ${a == null ? "-" : formatAED(a)}`);
-    }
-    if (view !== "MY" && mkAbs.length) {
-      const a = avgInRange(mkIdx, vr.from, vr.to);
-      parts.push(`Market Avg: ${a == null ? "-" : formatAED(a)}`);
+
+    if (viewRef.current !== "MARKET" && rawMyRef.current.length) {
+      const myStats = calculateVisibleStats(
+        rawMyRef.current,
+        visibleRange.from,
+        visibleRange.to,
+      );
+      parts.push(
+        `MyVeg Avg: ${formatAED(myStats?.average ?? null)}`,
+      );
     }
 
-    const text = parts.length ? parts.join("  •  ") : "Avg: -";
-    if (text !== lastAvgTextRef.current) {
-      lastAvgTextRef.current = text;
-      onAvgTextChange?.(text);
+    if (viewRef.current !== "MY" && rawMarketRef.current.length) {
+      const marketStats = calculateVisibleStats(
+        rawMarketRef.current,
+        visibleRange.from,
+        visibleRange.to,
+      );
+      parts.push(
+        `Market Avg: ${formatAED(marketStats?.average ?? null)}`,
+      );
     }
-  };
 
-  const scheduleAvg = () => {
-    if (rafRef.current != null) return;
-    rafRef.current = requestAnimationFrame(() => {
-      rafRef.current = null;
-      pushAvgText();
+    const averageText = parts.length
+      ? parts.join("  •  ")
+      : "Average: -";
+
+    if (averageText !== lastAverageTextRef.current) {
+      lastAverageTextRef.current = averageText;
+      onAvgTextChange?.(averageText);
+    }
+
+    chart.applyOptions({
+      timeScale: {
+        tickMarkFormatter: createDynamicTickFormatter(
+          visibleDurationRef,
+        ),
+      } as never,
     });
-  };
+  }, [onAvgTextChange, onVisibleStatsChange]);
 
-  /** ✅ Dynamic x-axis label format (based on selected range) */
-  const tickFormatter = useMemo(() => {
-    return ((time: any) => {
-      const d = timeToDate(time);
+  const scheduleVisibleUpdate = useCallback(() => {
+    if (animationFrameRef.current != null) return;
 
-      if (range === "1W") {
-        return d.toLocaleString("en-US", { weekday: "short" }); // Mon Tue...
-      }
+    animationFrameRef.current = requestAnimationFrame(() => {
+      animationFrameRef.current = null;
+      publishVisibleStats();
+    });
+  }, [publishVisibleStats]);
 
-      if (range === "1D"  || range === "1M") {
-        return String(d.getDate()); // 1..30/31
-      }
-
-      // 3M/6M/1Y/MAX -> month label
-      const mon = d.toLocaleString("en-US", { month: "short" }); // Jan
-      if (range === "1Y" || range === "MAX") {
-        // show year on Jan for clarity
-        if (d.getMonth() === 0) return `${mon} '${String(d.getFullYear()).slice(-2)}`;
-      }
-      return mon;
-    }) as any;
-  }, [range]);
-
-  /** ✅ Create chart once */
   useEffect(() => {
-    if (!containerRef.current || !wrapperRef.current) return;
-    if (chartRef.current) return;
+    const container = containerRef.current;
+    if (!container || chartRef.current) return;
 
-    const el = containerRef.current;
-
-    const chart = createChart(el, {
-      width: el.clientWidth || 900,
+    const chart = createChart(container, {
+      width: container.clientWidth || 900,
       height,
+      autoSize: false,
 
       layout: {
         background: { color: "transparent" },
-        textColor: "rgba(17,23,19,0.88)",
+        textColor: "rgba(17, 23, 19, 0.82)",
         attributionLogo: false,
       },
 
+      localization: {
+        locale: "en-US",
+        priceFormatter: (price: number) =>
+          modeRef.current === "PCT"
+            ? formatPercent(price)
+            : formatAED(price),
+      },
+
       grid: {
-        vertLines: { color: "rgba(0,0,0,0.05)" },
-        horzLines: { color: "rgba(0,0,0,0.05)" },
+        vertLines: { color: "rgba(17, 23, 19, 0.055)" },
+        horzLines: { color: "rgba(17, 23, 19, 0.055)" },
       },
 
       rightPriceScale: {
-        borderColor: "rgba(0,0,0,0.12)",
+        visible: true,
+        borderVisible: true,
+        borderColor: "rgba(17, 23, 19, 0.14)",
         ticksVisible: true,
+        entireTextOnly: true,
+        autoScale: true,
+        scaleMargins: {
+          top: 0.14,
+          bottom: 0.14,
+        },
       },
-timeScale: {
-  borderColor: "rgba(0,0,0,0.12)",
-  borderVisible: true,
 
-  // ✅ must be on
-  visible: true,
-  ticksVisible: true,
+      leftPriceScale: {
+        visible: false,
+      },
 
-  timeVisible: true,
-  secondsVisible: false,
-
-  // ✅ allow real panning
-  fixLeftEdge: false,
-  fixRightEdge: false,
-  rightOffset: 2,
-
-  // ✅ IMPORTANT: don’t “stick” to right edge when dragging
-  rightBarStaysOnScroll: false,
-
-  // ✅ helps prevent label skipping too aggressively
-  barSpacing: 22,
-  minBarSpacing: 10,
-
-  tickMarkFormatter: tickFormatter,
-} as any,
+      timeScale: {
+        visible: true,
+        borderVisible: true,
+        borderColor: "rgba(17, 23, 19, 0.14)",
+        ticksVisible: true,
+        timeVisible: true,
+        secondsVisible: false,
+        fixLeftEdge: false,
+        fixRightEdge: false,
+        rightOffset: 2,
+        rightBarStaysOnScroll: false,
+        barSpacing: 18,
+        minBarSpacing: 2,
+        lockVisibleTimeRangeOnResize: true,
+        tickMarkFormatter: createDynamicTickFormatter(
+          visibleDurationRef,
+        ),
+      },
 
       crosshair: {
         mode: CrosshairMode.Normal,
-        vertLine: { visible: true, labelVisible: false, width: 1, style: 2, color: "rgba(0,0,0,0.35)" },
-        horzLine: { visible: false, labelVisible: false },
+        vertLine: {
+          visible: true,
+          labelVisible: false,
+          width: 1,
+          style: 2,
+          color: "rgba(17, 23, 19, 0.38)",
+        },
+        horzLine: {
+          visible: true,
+          labelVisible: true,
+          width: 1,
+          style: 2,
+          color: "rgba(17, 23, 19, 0.2)",
+        },
       },
 
-      /** ✅ Drag left/right (this is your “horizontal scroll”) */
       handleScroll: {
         pressedMouseMove: true,
         mouseWheel: true,
@@ -480,308 +752,442 @@ timeScale: {
         vertTouchDrag: false,
       },
 
-      handleScale: { axisPressedMouseMove: false, mouseWheel: true, pinch: true },
+      handleScale: {
+        axisPressedMouseMove: {
+          time: true,
+          price: true,
+        },
+        mouseWheel: true,
+        pinch: true,
+      },
+
+      kineticScroll: {
+        mouse: true,
+        touch: true,
+      },
     });
 
     chartRef.current = chart;
 
-    myRef.current = chart.addSeries(LineSeries, {
-      lineWidth: 2,
-      color: "rgba(29,185,84,0.95)",
-      priceLineVisible: false,
-      lastValueVisible: false,
+    mySeriesRef.current = chart.addSeries(AreaSeries, {
+      lineWidth: 3,
+      lineColor: "rgba(22, 163, 74, 0.96)",
+      topColor: "rgba(22, 163, 74, 0.18)",
+      bottomColor: "rgba(22, 163, 74, 0.01)",
+      priceLineVisible: true,
+      lastValueVisible: true,
       crosshairMarkerVisible: true,
-      crosshairMarkerRadius: 4,
+      crosshairMarkerRadius: 5,
+      priceFormat: {
+        type: "price",
+        precision: 2,
+        minMove: 0.01,
+      },
     });
 
-    const onResize = () => {
-      if (!chartRef.current || !containerRef.current) return;
-      const parentW = containerRef.current.parentElement?.clientWidth || containerRef.current.clientWidth || 900;
-      try {
-        // @ts-ignore
-        chartRef.current.resize(parentW, height);
-      } catch {}
-      scheduleAvg();
-    };
-    window.addEventListener("resize", onResize);
+    const resizeObserver = new ResizeObserver((entries) => {
+      const entry = entries[0];
+      if (!entry || !chartRef.current) return;
 
-    const onVisibleRangeChange = () => scheduleAvg();
-    chart.timeScale().subscribeVisibleTimeRangeChange(onVisibleRangeChange);
+      const width = Math.max(
+        320,
+        Math.floor(entry.contentRect.width),
+      );
 
-    chart.subscribeCrosshairMove((param) => {
-      const top = topLabelRef.current;
-      const bottom = bottomTimeRef.current;
-      const wrap = wrapperRef.current;
-      if (!top || !bottom || !wrap) return;
+      chartRef.current.resize(width, height);
+      scheduleVisibleUpdate();
+    });
 
-      if (!param?.time || !param.point) {
-        top.style.opacity = "0";
-        bottom.style.opacity = "0";
+    resizeObserver.observe(container);
+
+    const onVisibleRangeChange = () => scheduleVisibleUpdate();
+    chart
+      .timeScale()
+      .subscribeVisibleTimeRangeChange(onVisibleRangeChange);
+
+    const onCrosshairMove = (param: {
+      time?: Time;
+      point?: { x: number; y: number };
+      seriesData: Map<ISeriesApi<"Area" | "Line">, unknown>;
+    }) => {
+      const tooltip = tooltipRef.current;
+      const timeTooltip = timeTooltipRef.current;
+      const wrapper = wrapperRef.current;
+
+      if (!tooltip || !timeTooltip || !wrapper) return;
+
+      if (!param.time || !param.point) {
+        tooltip.style.opacity = "0";
+        timeTooltip.style.opacity = "0";
         return;
       }
 
-      const myS = myRef.current;
-      const mkS = marketRef.current;
+      const mySeries = mySeriesRef.current;
+      const marketSeries = marketSeriesRef.current;
 
-      const myVal = myS ? (param.seriesData.get(myS) as any)?.value : undefined;
-      const mkVal = mkS ? (param.seriesData.get(mkS) as any)?.value : undefined;
+      const myValue = mySeries
+        ? Number(
+            (
+              param.seriesData.get(
+                mySeries as ISeriesApi<"Area" | "Line">,
+              ) as { value?: number } | undefined
+            )?.value,
+          )
+        : Number.NaN;
 
-      const fmt = (v: any) => {
-        const num = Number(v);
-        if (!Number.isFinite(num)) return "-";
-        return mode === "PCT" ? formatPct(num) : formatAED(num);
-      };
+      const marketValue = marketSeries
+        ? Number(
+            (
+              param.seriesData.get(
+                marketSeries as ISeriesApi<"Area" | "Line">,
+              ) as { value?: number } | undefined
+            )?.value,
+          )
+        : Number.NaN;
 
-      const parts: string[] = [];
-      if (view !== "MARKET" && myAbs.length) parts.push(`MyVeg: ${fmt(myVal)}`);
-      if (view !== "MY" && mkS && mkAbs.length) parts.push(`Market: ${fmt(mkVal)}`);
+      const seconds = timeToSeconds(param.time);
+      const selectedPoint =
+        seconds == null
+          ? null
+          : aggregatedMyRef.current.find(
+              (point) => Number(point.time) === seconds,
+            ) ??
+            aggregatedMarketRef.current.find(
+              (point) => Number(point.time) === seconds,
+            ) ??
+            null;
 
-      top.textContent = parts.join("  |  ");
-      top.style.opacity = "1";
+      const formatter =
+        modeRef.current === "PCT"
+          ? formatPercent
+          : formatAED;
 
-      const wrapRect = wrap.getBoundingClientRect();
-      const pillWidth = 180;
-      const left = clamp(param.point.x - pillWidth / 2, 8, wrapRect.width - pillWidth - 8);
+      const lines: string[] = [];
 
-      bottom.textContent = formatTimePill(param.time);
-      bottom.style.transform = `translateX(${left}px)`;
-      bottom.style.opacity = "1";
-    });
+      if (
+        viewRef.current !== "MARKET" &&
+        Number.isFinite(myValue)
+      ) {
+        lines.push(`MyVeg: ${formatter(myValue)}`);
+      }
+
+      if (
+        viewRef.current !== "MY" &&
+        Number.isFinite(marketValue)
+      ) {
+        lines.push(`Market: ${formatter(marketValue)}`);
+      }
+
+      if (selectedPoint && modeRef.current === "ABS") {
+        lines.push(
+          `High ${formatAED(selectedPoint.high)}  •  Low ${formatAED(
+            selectedPoint.low,
+          )}`,
+        );
+        lines.push(
+          `Avg ${formatAED(
+            selectedPoint.average,
+          )}  •  Median ${formatAED(selectedPoint.median)}`,
+        );
+        lines.push(
+          `${selectedPoint.updateCount} update${
+            selectedPoint.updateCount === 1 ? "" : "s"
+          }`,
+        );
+      }
+
+      tooltip.textContent = lines.join("\n");
+      tooltip.style.opacity = "1";
+
+      const wrapperRect = wrapper.getBoundingClientRect();
+      const timeWidth = 190;
+      const left = clamp(
+        param.point.x - timeWidth / 2,
+        8,
+        wrapperRect.width - timeWidth - 8,
+      );
+
+      timeTooltip.textContent =
+        seconds == null
+          ? ""
+          : visibleDurationRef.current != null &&
+              visibleDurationRef.current <= 2
+            ? formatDateTime(seconds)
+            : formatDate(seconds);
+
+      timeTooltip.style.transform = `translateX(${left}px)`;
+      timeTooltip.style.opacity = "1";
+    };
+
+    chart.subscribeCrosshairMove(onCrosshairMove as never);
 
     return () => {
-      window.removeEventListener("resize", onResize);
+      resizeObserver.disconnect();
+
       try {
-        chart.timeScale().unsubscribeVisibleTimeRangeChange(onVisibleRangeChange);
+        chart
+          .timeScale()
+          .unsubscribeVisibleTimeRangeChange(
+            onVisibleRangeChange,
+          );
       } catch {}
+
+      try {
+        chart.unsubscribeCrosshairMove(
+          onCrosshairMove as never,
+        );
+      } catch {}
+
       try {
         chart.remove();
       } catch {}
+
       chartRef.current = null;
-      myRef.current = null;
-      marketRef.current = null;
-      if (rafRef.current != null) cancelAnimationFrame(rafRef.current);
-      rafRef.current = null;
+      mySeriesRef.current = null;
+      marketSeriesRef.current = null;
+
+      if (animationFrameRef.current != null) {
+        cancelAnimationFrame(animationFrameRef.current);
+      }
+
+      animationFrameRef.current = null;
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [height]);
+  }, [height, scheduleVisibleUpdate]);
 
-  /** ✅ Apply tick formatter whenever range changes */
-  useEffect(() => {
-    const chart = chartRef.current;
-    if (!chart) return;
-    chart.applyOptions({
-      timeScale: { tickMarkFormatter: tickFormatter } as any,
-    });
-  }, [tickFormatter]);
-
-  /** ✅ Apply AED labels on Y-axis (and % when mode changes) */
   useEffect(() => {
     const chart = chartRef.current;
     if (!chart) return;
 
     chart.applyOptions({
       localization: {
-        priceFormatter: (price: number) => (mode === "PCT" ? formatPct(price) : formatAED(price)),
+        locale: "en-US",
+        priceFormatter: (price: number) =>
+          mode === "PCT"
+            ? formatPercent(price)
+            : formatAED(price),
       },
     });
   }, [mode]);
 
-  /** ✅ Update series data */
   useEffect(() => {
     const chart = chartRef.current;
-    const myS = myRef.current;
-    if (!chart || !myS) return;
+    const mySeries = mySeriesRef.current;
 
-    myS.setData(mySeries as any);
-    try {
-      myS.applyOptions({ visible: view !== "MARKET" && myAbs.length > 0 });
-    } catch {}
+    if (!chart || !mySeries) return;
 
-    const needMarket = view !== "MY" && mkSeries?.length;
+    const myData =
+      mode === "PCT"
+        ? toPercentSeries(aggregatedMy)
+        : toPriceSeries(aggregatedMy);
 
-    if (needMarket) {
-      if (!marketRef.current) {
-        marketRef.current = chart.addSeries(LineSeries, {
-          lineWidth: 2,
-          color: "rgba(37,99,235,0.95)",
-          priceLineVisible: false,
-          lastValueVisible: false,
-          crosshairMarkerVisible: true,
-          crosshairMarkerRadius: 4,
-        });
-      }
-      marketRef.current.setData(mkSeries as any);
-    } else {
-      if (marketRef.current) {
-        try {
-          chart.removeSeries(marketRef.current);
-        } catch {}
-        marketRef.current = null;
-      }
+    const marketData =
+      mode === "PCT"
+        ? toPercentSeries(aggregatedMarket)
+        : toPriceSeries(aggregatedMarket);
+
+    mySeries.setData(myData);
+
+    mySeries.applyOptions({
+      visible: view !== "MARKET" && myData.length > 0,
+    });
+
+    const shouldShowMarket =
+      view !== "MY" && marketData.length > 0;
+
+    if (shouldShowMarket && !marketSeriesRef.current) {
+      marketSeriesRef.current = chart.addSeries(LineSeries, {
+        lineWidth: 2,
+        color: "rgba(37, 99, 235, 0.94)",
+        priceLineVisible: false,
+        lastValueVisible: true,
+        crosshairMarkerVisible: true,
+        crosshairMarkerRadius: 5,
+        priceFormat: {
+          type: "price",
+          precision: 2,
+          minMove: 0.01,
+        },
+      });
     }
 
-    scheduleAvg();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [mySeries, mkSeries, view, myAbs.length]);
+    if (marketSeriesRef.current) {
+      marketSeriesRef.current.setData(marketData);
+      marketSeriesRef.current.applyOptions({
+        visible: shouldShowMarket,
+      });
+    }
 
-  /**
-   * ✅ IMPORTANT:
-   * 1) Set chart width so ALL labels appear (Mon..Sun / 1..30 / Jan..Dec)
-   * 2) Wrapper will become horizontally scrollable (overflow-x-auto)
-   */
-  useEffect(() => {
-    const chart = chartRef.current;
-    const el = containerRef.current;
-    if (!chart || !el) return;
+    scheduleVisibleUpdate();
+  }, [
+    aggregatedMarket,
+    aggregatedMy,
+    mode,
+    scheduleVisibleUpdate,
+    view,
+  ]);
 
-    const parentW = el.parentElement?.clientWidth || el.clientWidth || 900;
-    const count = visiblePointCount(range);
-    const wanted = Math.max(parentW, count * pxPerPoint(range));
-
-    setChartWidth(wanted);
-
-    try {
-      // @ts-ignore
-      chart.resize(wanted, height);
-    } catch {}
-
-    scheduleAvg();
-  }, [range, height]);
-
-  /**
-   * ✅ On range change: show last N days/months, BUT allow dragging left/right across full dataset.
-   * This gives you exactly: Jan visible -> drag right -> Feb -> Mar, etc.
-   */
   useEffect(() => {
     const chart = chartRef.current;
     if (!chart) return;
 
-    const base = mkSeries.length ? mkSeries : mySeries;
-    if (!base.length) return;
+    const active =
+      view === "MARKET"
+        ? aggregatedMarket
+        : aggregatedMy.length
+          ? aggregatedMy
+          : aggregatedMarket;
 
-    // MAX: show all
-    if (range === "MAX") {
-      try {
-        chart.timeScale().fitContent();
-      } catch {}
-      scheduleAvg();
+    if (!active.length) {
+      setVisibleStats(null);
+      onVisibleStatsChange?.(null);
       return;
     }
 
-    // Daily ranges
-    if (range === "1D" || range === "1W" || range === "1M") {
-      const days = rangeToDays(range);
-      const last = base[base.length - 1].time;
-      const first = addDays(last, -(days - 1));
+    requestAnimationFrame(() => {
+      const timeScale = chart.timeScale();
+      const bars = visibleBarsForRange(range);
 
-      try {
-        chart.timeScale().setVisibleRange({
-          from: parseBusinessDay(first),
-          to: parseBusinessDay(last),
+      if (bars == null || active.length <= bars) {
+        timeScale.fitContent();
+      } else {
+        timeScale.setVisibleLogicalRange({
+          from: Math.max(0, active.length - bars - 0.5),
+          to: active.length - 0.5,
         });
-      } catch {
-        try {
-          chart.timeScale().fitContent();
-        } catch {}
       }
 
-      scheduleAvg();
-      return;
-    }
+      scheduleVisibleUpdate();
+    });
+  }, [
+    aggregatedMarket,
+    aggregatedMy,
+    onVisibleStatsChange,
+    range,
+    scheduleVisibleUpdate,
+    view,
+  ]);
 
-    // Monthly ranges (3M/6M/1Y)
-    const months = rangeToMonths(range);
-    const last = base[base.length - 1].time; // YYYY-MM-01
-    const first = addMonths(last, -(months - 1)); // month-01
-
-    try {
-      chart.timeScale().setVisibleRange({
-        from: parseBusinessDay(first),
-        to: parseBusinessDay(last),
-      });
-    } catch {
-      try {
-        chart.timeScale().fitContent();
-      } catch {}
-    }
-
-    scheduleAvg();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-}, [range, mySeries.length, mkSeries.length]);
-
-  useEffect(() => {
-    scheduleAvg();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [mode, view]);
-
-  const showViewControls = hasMy && hasMk;
+  const showViewControls = hasMy && hasMarket;
+  const periodLabel =
+    visibleStats?.from && visibleStats?.to
+      ? `${new Date(visibleStats.from).toLocaleDateString("en-GB", {
+          day: "2-digit",
+          month: "short",
+          year: "numeric",
+        })} – ${new Date(visibleStats.to).toLocaleDateString("en-GB", {
+          day: "2-digit",
+          month: "short",
+          year: "numeric",
+        })}`
+      : "Move or zoom the chart to explore history";
 
   return (
-    <div className="h-full w-full flex flex-col min-w-0">
-      <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between mb-3 min-w-0">
+    <div className="flex h-full w-full min-w-0 flex-col">
+      <div className="mb-3 flex min-w-0 flex-col gap-3 md:flex-row md:items-center md:justify-between">
         <div className="min-w-0">
-          <div className="text-[#111713] font-black truncate">{title}</div>
-          <div className="text-sm text-[#648770] font-medium">Drag left/right to explore more dates.</div>
+          <div className="truncate font-black text-[#111713]">
+            {title}
+          </div>
+          <div className="text-sm font-medium text-[#648770]">
+            Drag to scroll • Mouse-wheel or pinch to zoom
+          </div>
         </div>
 
-        <div className="flex gap-2 overflow-x-auto scrollbar-hide pb-1 -mx-1 px-1 md:overflow-visible md:flex-wrap md:pb-0 md:mx-0 md:px-0">
+        <div className="-mx-1 flex gap-2 overflow-x-auto px-1 pb-1 md:mx-0 md:flex-wrap md:overflow-visible md:px-0 md:pb-0">
           {showViewControls ? (
             [
-              { k: "MY", label: "MyVeg" },
-              { k: "MARKET", label: "Market" },
-              { k: "COMPARE", label: "Compare" },
-            ].map((b) => (
+              { key: "MY", label: "MyVeg" },
+              { key: "MARKET", label: "Market" },
+              { key: "COMPARE", label: "Compare" },
+            ].map((button) => (
               <button
-                key={b.k}
-                onClick={() => setView(b.k as ViewMode)}
+                key={button.key}
+                type="button"
+                onClick={() =>
+                  setView(button.key as ViewMode)
+                }
                 className={[
-                  "shrink-0 px-3 py-2 rounded-full text-sm font-black border transition",
-                  view === b.k
-                    ? "bg-[#111713] text-white border-[#111713]"
-                    : "bg-white text-[#111713] border-[#e0e8e3] hover:bg-[#f6f8f7]",
+                  "shrink-0 rounded-full border px-3 py-2 text-sm font-black transition",
+                  view === button.key
+                    ? "border-[#111713] bg-[#111713] text-white"
+                    : "border-[#e0e8e3] bg-white text-[#111713] hover:bg-[#f6f8f7]",
                 ].join(" ")}
               >
-                {b.label}
+                {button.label}
               </button>
             ))
           ) : (
-            <span className="shrink-0 px-3 py-2 rounded-full text-sm font-black border border-[#e0e8e3] bg-white text-[#111713]">
-              Market
+            <span className="shrink-0 rounded-full border border-[#e0e8e3] bg-white px-3 py-2 text-sm font-black text-[#111713]">
+              {hasMarket ? "Market" : "MyVeg"}
             </span>
           )}
 
           <button
-            onClick={() => setMode((m) => (m === "ABS" ? "PCT" : "ABS"))}
-            className="shrink-0 px-3 py-2 rounded-full text-sm font-black border border-[#e0e8e3] bg-white hover:bg-[#f6f8f7]"
+            type="button"
+            onClick={() =>
+              setMode((current) =>
+                current === "ABS" ? "PCT" : "ABS",
+              )
+            }
+            className="shrink-0 rounded-full border border-[#e0e8e3] bg-white px-3 py-2 text-sm font-black text-[#111713] hover:bg-[#f6f8f7]"
           >
             {mode === "ABS" ? "Price (AED)" : "% Change"}
           </button>
         </div>
       </div>
 
-      {/* ✅ wrapper is now horizontally scrollable */}
-     <div ref={wrapperRef} className="relative w-full select-none overflow-x-hidden overflow-y-visible rounded-2xl">
+      <div className="mb-3 grid grid-cols-2 gap-2 sm:grid-cols-4 lg:grid-cols-8">
+        {[
+          ["Visible period", periodLabel],
+          ["Current", formatAED(visibleStats?.current ?? null)],
+          ["Average", formatAED(visibleStats?.average ?? null)],
+          ["High", formatAED(visibleStats?.high ?? null)],
+          ["Low", formatAED(visibleStats?.low ?? null)],
+          ["Median", formatAED(visibleStats?.median ?? null)],
+          ["Updates", String(visibleStats?.updateCount ?? 0)],
+          [
+            "Change",
+            visibleStats?.changePercent == null
+              ? "-"
+              : formatPercent(visibleStats.changePercent),
+          ],
+        ].map(([label, value]) => (
+          <div
+            key={label}
+            className="min-w-0 rounded-xl border border-[#e0e8e3] bg-white px-3 py-2"
+          >
+            <div className="truncate text-xs font-bold uppercase tracking-wide text-[#648770]">
+              {label}
+            </div>
+            <div
+              className="mt-1 truncate text-sm font-black text-[#111713]"
+              title={value}
+            >
+              {value}
+            </div>
+          </div>
+        ))}
+      </div>
+
+      <div
+        ref={wrapperRef}
+        className="relative w-full select-none overflow-hidden rounded-2xl"
+      >
         <div
-          ref={topLabelRef}
-          className="absolute left-3 top-3 z-10 rounded-lg bg-white/95 border border-black/10 px-3 py-2 text-[#111713] shadow-md text-sm font-black"
-          style={{
-            opacity: 0,
-            pointerEvents: "none",
-            maxWidth: "calc(100% - 24px)",
-            whiteSpace: "nowrap",
-            overflow: "hidden",
-            textOverflow: "ellipsis",
-          }}
+          ref={tooltipRef}
+          className="pointer-events-none absolute left-3 top-3 z-10 max-w-[calc(100%-24px)] whitespace-pre-line rounded-lg border border-black/10 bg-white/95 px-3 py-2 text-sm font-black text-[#111713] opacity-0 shadow-md transition-opacity"
         />
 
         <div
-          ref={bottomTimeRef}
-          className="absolute bottom-2 z-10 rounded-md bg-[#111713] text-white px-3 py-1 text-xs font-black shadow-md"
-          style={{ opacity: 0, pointerEvents: "none", width: 180 }}
+          ref={timeTooltipRef}
+          className="pointer-events-none absolute bottom-2 z-10 w-[190px] rounded-md bg-[#111713] px-3 py-1 text-center text-xs font-black text-white opacity-0 shadow-md transition-opacity"
         />
 
-        {/* ✅ chart canvas widened so labels show fully */}
-       <div ref={containerRef} className="w-full" style={{ height }} />
+        <div
+          ref={containerRef}
+          className="w-full touch-pan-y"
+          style={{ height }}
+        />
       </div>
     </div>
   );

@@ -4,16 +4,9 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { getSupabase } from "@/lib/supabaseClient";
 
-function safeSupabase() {
-  try {
-    return getSupabase();
-  } catch {
-    return null;
-  }
-}
-
 export default function AdminLoginPage() {
   const router = useRouter();
+
   const [email, setEmail] = useState("yksample@gmail.com");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
@@ -21,59 +14,128 @@ export default function AdminLoginPage() {
 
   async function signIn() {
     setErr(null);
-    const supabase = safeSupabase();
-    if (!supabase) return setErr("Supabase not ready.");
 
-    if (!email.trim() || !password.trim()) return setErr("Enter email & password.");
+    const cleanEmail = email.trim().toLowerCase();
+
+    if (!cleanEmail || !password) {
+      setErr("Enter email and password.");
+      return;
+    }
 
     setLoading(true);
+
     try {
-      const { error } = await supabase.auth.signInWithPassword({
-        email: email.trim().toLowerCase(),
+      const supabase = getSupabase();
+
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email: cleanEmail,
         password,
       });
 
-      if (error) return setErr(error.message);
+      if (error) {
+        console.error("Supabase login error:", {
+          message: error.message,
+          status: error.status,
+          code: error.code,
+        });
 
-      router.push("/admin/price-approvals");
+        if (error.message.toLowerCase().includes("invalid login credentials")) {
+          setErr(
+            "Invalid email or password. Please check that this admin user exists in the production Supabase project."
+          );
+        } else {
+          setErr(error.message);
+        }
+
+        return;
+      }
+
+      if (!data.session || !data.user) {
+        setErr("Login succeeded, but no user session was created.");
+        return;
+      }
+
+      router.replace("/admin/price-approvals");
+      router.refresh();
+    } catch (error) {
+      console.error("Admin login failed:", error);
+
+      setErr(
+        error instanceof Error
+          ? error.message
+          : "Unable to connect to Supabase."
+      );
     } finally {
       setLoading(false);
     }
   }
 
+  function handleKeyDown(event: React.KeyboardEvent<HTMLInputElement>) {
+    if (event.key === "Enter" && !loading) {
+      void signIn();
+    }
+  }
+
   return (
-    <main className="min-h-[calc(100vh-80px)] bg-[#f6f8f7] px-4 sm:px-6 lg:px-12 py-10">
-      <div className="max-w-[560px] mx-auto bg-white border border-[#e0e8e3] rounded-[28px] p-8 shadow-sm">
-        <h1 className="text-3xl font-black text-[#111713]">Admin Login</h1>
-        <p className="mt-1 text-[#648770] font-semibold">
-          Login with admin email (must be in admin_allowlist).
+    <main className="min-h-[calc(100vh-80px)] bg-[#f6f8f7] px-4 py-10 sm:px-6 lg:px-12">
+      <div className="mx-auto max-w-[560px] rounded-[28px] border border-[#e0e8e3] bg-white p-8 shadow-sm">
+        <h1 className="text-3xl font-black text-[#111713]">
+          Admin Login
+        </h1>
+
+        <p className="mt-1 font-semibold text-[#648770]">
+          Log in using an admin account.
         </p>
 
         <div className="mt-6">
-          <label className="block text-sm font-black text-[#111713] mb-2">Email</label>
+          <label
+            htmlFor="admin-email"
+            className="mb-2 block text-sm font-black text-[#111713]"
+          >
+            Email
+          </label>
+
           <input
+            id="admin-email"
+            type="email"
+            autoComplete="email"
             value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            className="w-full h-12 px-4 rounded-[18px] border border-[#e0e8e3] bg-[#f6f8f7] font-semibold outline-none"
+            onChange={(event) => setEmail(event.target.value)}
+            onKeyDown={handleKeyDown}
+            className="h-12 w-full rounded-[18px] border border-[#e0e8e3] bg-[#f6f8f7] px-4 font-semibold outline-none"
           />
         </div>
 
         <div className="mt-4">
-          <label className="block text-sm font-black text-[#111713] mb-2">Password</label>
+          <label
+            htmlFor="admin-password"
+            className="mb-2 block text-sm font-black text-[#111713]"
+          >
+            Password
+          </label>
+
           <input
+            id="admin-password"
             type="password"
+            autoComplete="current-password"
             value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            className="w-full h-12 px-4 rounded-[18px] border border-[#e0e8e3] bg-[#f6f8f7] font-semibold outline-none"
+            onChange={(event) => setPassword(event.target.value)}
+            onKeyDown={handleKeyDown}
+            className="h-12 w-full rounded-[18px] border border-[#e0e8e3] bg-[#f6f8f7] px-4 font-semibold outline-none"
           />
         </div>
 
-        {err && <div className="mt-3 text-sm font-black text-red-600">{err}</div>}
+        {err && (
+          <div className="mt-3 rounded-xl bg-red-50 p-3 text-sm font-bold text-red-600">
+            {err}
+          </div>
+        )}
 
         <button
-          onClick={signIn}
+          type="button"
+          onClick={() => void signIn()}
           disabled={loading}
-          className="mt-6 w-full h-12 rounded-full bg-[#1db954] text-white font-black disabled:opacity-60"
+          className="mt-6 h-12 w-full rounded-full bg-[#1db954] font-black text-white disabled:cursor-not-allowed disabled:opacity-60"
         >
           {loading ? "Signing in…" : "Login & Open Approvals"}
         </button>

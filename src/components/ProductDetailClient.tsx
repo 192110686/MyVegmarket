@@ -147,6 +147,69 @@ function formatPackaging(raw?: string | null) {
   return `Packaging: ${p}`;
 }
 
+
+type MarketHistoryPoint = {
+  time: string;
+  value: number;
+};
+
+type MarketOverview = {
+  current: number;
+  previous: number | null;
+  highest: number;
+  lowest: number;
+  average: number;
+  median: number;
+  updates: number;
+  from: string | null;
+  to: string | null;
+  changePercent: number | null;
+};
+
+function medianValue(values: number[]) {
+  if (!values.length) return 0;
+  const sorted = [...values].sort((a, b) => a - b);
+  const middle = Math.floor(sorted.length / 2);
+  return sorted.length % 2 === 0
+    ? (sorted[middle - 1] + sorted[middle]) / 2
+    : sorted[middle];
+}
+
+function formatPrice(value?: number | null) {
+  if (value == null || !Number.isFinite(value)) return "—";
+  return `AED ${value.toFixed(2)}`;
+}
+
+function formatShortDate(value?: string | null) {
+  if (!value) return "—";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "—";
+  return date.toLocaleDateString("en-GB", {
+    timeZone: "Asia/Dubai",
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+  });
+}
+
+function buildSparklinePath(points: MarketHistoryPoint[], width = 520, height = 180) {
+  if (!points.length) return "";
+
+  const values = points.map((point) => point.value);
+  const min = Math.min(...values);
+  const max = Math.max(...values);
+  const spread = Math.max(max - min, 1);
+  const xStep = points.length > 1 ? width / (points.length - 1) : 0;
+
+  return points
+    .map((point, index) => {
+      const x = index * xStep;
+      const y = height - ((point.value - min) / spread) * (height - 24) - 12;
+      return `${index === 0 ? "M" : "L"} ${x.toFixed(2)} ${y.toFixed(2)}`;
+    })
+    .join(" ");
+}
+
 export default function ProductDetailClient({
   product,
   isAlAweerLite = false,
@@ -170,6 +233,7 @@ export default function ProductDetailClient({
   // ✅ DB-driven last updated for Al Aweer rate (from price_updates.created_at)
   const [marketUpdatedAt, setMarketUpdatedAt] = useState<string | null>(null);
   const [marketAvgFromDb, setMarketAvgFromDb] = useState<number | null>(null);
+  const [previewHistory, setPreviewHistory] = useState<MarketHistoryPoint[]>([]);
 
   // ✅ avoid window access during render (prevents hydration quirks)
   const [chartHeight, setChartHeight] = useState(560);
@@ -405,6 +469,89 @@ useEffect(() => {
     window.location.href = `tel:+91${SUPPORT_CALL_NUMBER}`;
   };
 
+
+  const productImage = safeImg(
+    storagePublicUrl((product as any)?.image_url || ""),
+  );
+
+  const packagingText =
+    formatPackaging((product as any).packaging).replace(/^Packaging:\s*/i, "") ||
+    "Standard market packaging";
+
+  const marketOverview = useMemo<MarketOverview>(() => {
+    const values = previewHistory.map((point) => point.value);
+    const current = marketAvg;
+
+    if (!values.length) {
+      return {
+        current,
+        previous: null,
+        highest: current,
+        lowest: current,
+        average: current,
+        median: current,
+        updates: 0,
+        from: null,
+        to: marketUpdatedAt,
+        changePercent: null,
+      };
+    }
+
+    const previous =
+      values.length > 1 ? values[values.length - 2] : values[0];
+    const latest = values[values.length - 1];
+    const changePercent =
+      previous > 0 ? ((latest - previous) / previous) * 100 : null;
+
+    return {
+      current,
+      previous,
+      highest: Math.max(...values),
+      lowest: Math.min(...values),
+      average: values.reduce((sum, value) => sum + value, 0) / values.length,
+      median: medianValue(values),
+      updates: values.length,
+      from: previewHistory[0]?.time ?? null,
+      to: previewHistory[previewHistory.length - 1]?.time ?? marketUpdatedAt,
+      changePercent,
+    };
+  }, [marketAvg, marketUpdatedAt, previewHistory]);
+
+  const sparklinePath = useMemo(
+    () => buildSparklinePath(previewHistory),
+    [previewHistory],
+  );
+
+  const qualityPoints = [
+    "Rich source of vitamins, minerals and antioxidants",
+    "Suitable for restaurants, groceries and bulk buyers",
+    "Consistent grading for reliable commercial use",
+    "Carefully sourced and quality checked",
+  ];
+
+  const sourceBenefits = [
+    {
+      icon: "verified",
+      title: "Verified Al Aweer Prices",
+      text: "Updated market rates from official and approved sources",
+    },
+    {
+      icon: "groups",
+      title: "Trusted by Businesses",
+      text: "Designed for restaurants, groceries, resellers and exporters",
+    },
+    {
+      icon: "inventory_2",
+      title: "Bulk Sourcing Support",
+      text: "Help finding reliable supply for larger business requirements",
+    },
+    {
+      icon: "chat",
+      title: "WhatsApp Assistance",
+      text: "Quick support for orders, market rates and product enquiries",
+    },
+  ];
+
   return (
     <>
       {/* ✅ FULL PAGE TREND OVERLAY */}
@@ -486,225 +633,590 @@ useEffect(() => {
         </div>
       )}
 
-      {/* ✅ NORMAL PRODUCT DETAIL PAGE */}
-      <main className="bg-[#f6f8f7] min-h-screen px-6 lg:px-20 pt-10 pb-24">
-        <div className="max-w-[1300px] mx-auto">
+      {/* PREMIUM PRODUCT DETAIL PAGE */}
+<main className="bg-[#f6f8f7] px-4 pb-8 pt-8 sm:px-6 lg:px-10 xl:px-14">
+          <div className="mx-auto max-w-[1460px]">
           {/* Breadcrumb */}
-          <div className="flex items-center gap-2 text-sm text-[#648770] mb-6 font-medium">
-            <Link className="hover:text-[#1db954]" href="/">
+          <nav className="mb-5 flex items-center gap-2 text-sm font-medium text-[#648770]">
+            <Link className="transition hover:text-[#0c8f3c]" href="/">
               Home
             </Link>
-            <span className="material-symbols-outlined text-base">chevron_right</span>
-            <Link className="hover:text-[#1db954]" href={`/products/${product.category}`}>
+            <span className="material-symbols-outlined text-base">
+              chevron_right
+            </span>
+            <Link
+              className="transition hover:text-[#0c8f3c]"
+              href={`/products/${product.category}`}
+            >
               Products
             </Link>
-            <span className="material-symbols-outlined text-base">chevron_right</span>
-            <span className="text-[#111713] font-bold">{title}</span>
-          </div>
+            <span className="material-symbols-outlined text-base">
+              chevron_right
+            </span>
+            <span className="font-black text-[#111713]">{title}</span>
+          </nav>
 
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
-            {/* Left */}
-            <div className="lg:col-span-4 space-y-3">
-              <div className="relative rounded-[28px] overflow-hidden border border-[#e0e8e3] shadow-sm bg-white">
-                <div className="absolute top-4 left-4 z-10 bg-[#1db954] text-white px-4 py-1.5 rounded-full text-xs font-black uppercase tracking-wider">
+          {/* Product hero */}
+          <section className="overflow-hidden rounded-[30px] border border-[#dde8e1] bg-white p-4 shadow-[0_12px_40px_rgba(17,23,19,0.06)] sm:p-5 lg:p-6">
+            <div className="grid gap-7 lg:grid-cols-[minmax(0,5fr)_minmax(0,7fr)]">
+              {/* Product gallery */}
+<div className="relative min-h-[360px] overflow-hidden rounded-[24px] border border-[#e1e9e4] bg-gradient-to-br from-[#f8faf9] to-[#eef4f0]">                <div className="absolute left-4 top-4 z-10 flex items-center gap-2 rounded-full bg-[#078a36] px-4 py-2 text-xs font-black uppercase tracking-wide text-white shadow-lg shadow-[#078a36]/20">
+                  <span className="material-symbols-outlined text-[16px]">
+                    workspace_premium
+                  </span>
                   Top Quality
                 </div>
 
-                <div className="aspect-square w-full bg-[#f0f4f2] flex items-center justify-center p-6">
-                  <img
-                    src={safeImg(storagePublicUrl((product as any)?.image_url || ""))}
+<div className="flex min-h-[360px] items-center justify-center p-8">
+                    <img
+                    src={productImage}
                     alt={title}
-                    className="w-full h-full object-contain"
-                    onError={(e) => {
-                      (e.currentTarget as HTMLImageElement).src =
+className="h-full max-h-[285px] w-full object-contain drop-shadow-[0_16px_18px_rgba(17,23,19,0.10)]"
+                    onError={(event) => {
+                      event.currentTarget.src =
                         "https://images.unsplash.com/photo-1542838132-92c53300491e?auto=format&fit=crop&w=1600&q=80";
                     }}
                   />
                 </div>
               </div>
 
-              {/* ✅ SKU / Verified supplier removed completely */}
-            </div>
+              {/* Product information */}
+              <div className="flex min-w-0 flex-col py-1 lg:py-3">
+                <div>
+                  <h1 className="text-[40px] font-black leading-[1.05] tracking-[-0.04em] text-[#111713] sm:text-[50px] xl:text-[56px]">
+                    {title}
+                  </h1>
 
-            {/* Right */}
-            <div className="lg:col-span-8 lg:-mt-2">
-              <h1 className="text-[52px] leading-[1.05] font-black text-[#111713]">
-                {title}
-              </h1>
-
-              <div className="mt-3 text-[#648770] font-medium">
-                {/* Line 1: Origin + Grade + Unit */}
-                <p className="flex items-center gap-2">
-                  <span className="material-symbols-outlined text-base">location_on</span>
-                  <span>
-                    Origin: {origin} • Grade: {grade} • Unit: {unit}
-                  </span>
-                </p>
-
-                {/* Line 2: Shipment */}
-                {ship && (
-                  <p className="mt-1 flex items-center gap-2 text-[#648770] font-medium">
-                    <span className="material-symbols-outlined text-base">{ship.icon}</span>
-                    <span className="font-medium">Shipment:</span>
-                    <span>{ship.text}</span>
-                  </p>
-                )}
-              </div>
-
-              {/* Price Analysis */}
-              <div className="mt-7 bg-white border border-[#e0e8e3] p-6 rounded-[28px] shadow-sm">
-                <div className="flex items-center justify-between mb-6">
-                  <h3 className="font-black flex items-center gap-2 text-lg text-[#111713]">
-                    <span className="material-symbols-outlined text-[#1db954]" aria-hidden="true">
-                      analytics
+                  <div className="mt-3 flex items-center gap-2 text-sm font-bold text-[#111713] sm:text-base">
+                    <span className="flex h-7 w-7 items-center justify-center rounded-full bg-[#e7f7ed] text-[#078a36]">
+                      <span className="material-symbols-outlined text-[18px]">
+                        verified_user
+                      </span>
                     </span>
-                    Price Analysis
-                  </h3>
-                </div>
-
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-stretch">
-                  {/* Left: market only */}
-                  <div className="rounded-2xl border border-[#e0e8e3] bg-[#fbfcfb] p-5">
-                    <div className="grid gap-4 grid-cols-1">
-                      <div className="rounded-2xl bg-white border border-[#e0e8e3] p-4">
-                        <div className="flex items-start justify-between gap-3">
-                          <div className="text-[11px] font-black uppercase tracking-wider text-[#648770] mb-1">
-                            AL AWEER RATE
-                          </div>
-
-                          <div className="text-[11px] font-semibold text-[#6b7280] whitespace-nowrap">
-                            Last updated:{" "}
-                            {marketUpdatedAt ? formatUpdatedAtDubai(marketUpdatedAt) : "—"}
-                          </div>
-                        </div>
-
-                        <div className="text-2xl font-black text-[#111713]">
-                          AED {marketAvg.toFixed(2)}
-                        </div>
-                      </div>
-                    </div>
+                    Premium Quality • Fresh • Hand Selected
                   </div>
 
-                  {/* Right: trend preview */}
+                  <div className="mt-7 flex flex-wrap gap-x-7 gap-y-4 text-sm text-[#33443a] sm:text-base">
+                    <div className="flex items-center gap-2">
+                      <span className="material-symbols-outlined text-[#315f45]">
+                        location_on
+                      </span>
+                      <span>
+                        <strong className="text-[#111713]">Origin:</strong>{" "}
+                        {origin}
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span className="material-symbols-outlined text-[#315f45]">
+                        grade
+                      </span>
+                      <span>
+                        <strong className="text-[#111713]">Grade:</strong>{" "}
+                        {grade}
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span className="material-symbols-outlined text-[#315f45]">
+                        scale
+                      </span>
+                      <span>
+                        <strong className="text-[#111713]">Unit:</strong> {unit}
+                      </span>
+                    </div>
+                    {ship && (
+                      <div className="flex items-center gap-2">
+                        <span className="material-symbols-outlined text-[#315f45]">
+                          {ship.icon}
+                        </span>
+                        <span>
+                          <strong className="text-[#111713]">Shipment:</strong>{" "}
+                          {ship.text}
+                        </span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+   <div className="mt-7 rounded-[22px] border border-[#dfe8e2] bg-[#fbfdfb] p-5">
+  <div className="grid items-center gap-5 sm:grid-cols-[1fr_auto_auto]">
+    <div>
+      <p className="text-[11px] font-black uppercase tracking-[0.12em] text-[#648770]">
+        Al Aweer market rate
+      </p>
+
+      <p className="mt-1 text-4xl font-black tracking-[-0.03em] text-[#078a36]">
+        {formatPrice(marketOverview.current)}
+      </p>
+    </div>
+
+    <div className="border-[#e1e9e4] sm:border-l sm:pl-6">
+      <p className="text-xs font-bold text-[#648770]">
+        Last updated
+      </p>
+
+      <p className="mt-1 text-sm font-black text-[#111713]">
+        {marketUpdatedAt
+          ? formatUpdatedAtDubai(marketUpdatedAt)
+          : "—"}
+      </p>
+    </div>
+
+    {marketOverview.changePercent != null ? (
+      <div
+        className={[
+          "rounded-2xl px-5 py-4 text-center",
+          marketOverview.changePercent >= 0
+            ? "bg-[#edf8f1] text-[#078a36]"
+            : "bg-[#fff1f1] text-[#c53030]",
+        ].join(" ")}
+      >
+        <p className="text-lg font-black">
+          {marketOverview.changePercent >= 0 ? "↑ " : "↓ "}
+          {Math.abs(marketOverview.changePercent).toFixed(2)}%
+        </p>
+
+        <p className="text-[11px] font-bold text-[#648770]">
+          vs previous price
+        </p>
+      </div>
+    ) : (
+      <div className="rounded-2xl bg-[#f4f7f5] px-5 py-4 text-center">
+        <p className="text-sm font-black text-[#648770]">
+          No comparison yet
+        </p>
+      </div>
+    )}
+  </div>
+</div>
+                <div className="mt-6 grid gap-3 sm:grid-cols-2">
                   <button
                     type="button"
                     onClick={openTrendPageFast}
-                    className="rounded-2xl bg-[#f6f8f7] border border-[#e0e8e3] p-5 flex flex-col justify-between text-left hover:shadow-md hover:shadow-black/5 transition"
-                    title="Click to view full trend"
+                    className="flex min-h-14 items-center justify-center gap-3 rounded-xl bg-gradient-to-r from-[#078a36] to-[#0ca443] px-6 font-black text-white shadow-lg shadow-[#078a36]/20 transition hover:-translate-y-0.5 hover:shadow-xl"
                   >
-                    <div>
-                      <div className="text-[11px] uppercase tracking-widest font-black text-[#111713]/45">
-                        VIEW PRICE TREND
-                      </div>
-                      <div className="text-sm text-[#648770] font-medium mt-1">
-                        View interactive market price chart (Al Aweer)
-                      </div>
-                    </div>
+                    <span className="material-symbols-outlined">
+                      monitoring
+                    </span>
+                    View Price Trend
+                  </button>
 
-                    <div className="mt-3 relative h-[90px] rounded-xl bg-white border border-[#e0e8e3] overflow-hidden">
-                      <svg viewBox="0 0 220 100" className="w-full h-full">
-                        <path
-                          d="M0,70 C35,35 70,85 110,55 C140,30 170,50 220,18"
-                          fill="none"
-                          stroke="#1db954"
-                          strokeWidth="3"
-                        />
-                      </svg>
-                    </div>
+                  <button
+                    type="button"
+                    onClick={onWhatsAppSupport}
+                    className="flex min-h-14 items-center justify-center gap-3 rounded-xl border border-[#078a36] bg-white px-6 font-black text-[#078a36] transition hover:bg-[#effaf3]"
+                  >
+                    <span className="material-symbols-outlined">chat</span>
+                    WhatsApp Enquiry
                   </button>
                 </div>
               </div>
+            </div>
+          </section>
 
-              {/* Chips */}
-              <div className="mt-6 grid grid-cols-1 sm:grid-cols-3 gap-4">
-                <div className="bg-white border border-[#e0e8e3] rounded-2xl p-4 shadow-sm">
-                  <p className="text-[11px] font-black uppercase tracking-wider text-[#648770] mb-1">
-                    Type
+          {/* Product information strip */}
+          <section className="mt-5 grid overflow-hidden rounded-[24px] border border-[#dde8e1] bg-white shadow-[0_8px_28px_rgba(17,23,19,0.045)] sm:grid-cols-2 lg:grid-cols-6">
+            {[
+              { icon: "category", label: "Type", value: grade },
+              {
+                icon: "inventory_2",
+                label: "Packaging",
+                value: packagingText,
+              },
+              { icon: "location_on", label: "Origin", value: origin },
+              {
+                icon: ship?.icon || "local_shipping",
+                label: "Shipment",
+                value: ship?.text || "Not specified",
+              },
+              { icon: "scale", label: "Unit", value: unit },
+              {
+                icon: "storefront",
+                label: "Market Source",
+                value: "Al Aweer",
+              },
+            ].map((item, index) => (
+              <div
+                key={item.label}
+                className={[
+                  "flex min-w-0 items-center gap-3 px-4 py-4",
+                  index > 0 ? "border-t border-[#e6ede8] sm:border-t-0" : "",
+                  index % 2 === 1 ? "sm:border-l" : "",
+                  index > 1 ? "lg:border-l" : "",
+                ].join(" ")}
+              >
+                <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#edf8f1] text-[#078a36]">
+                  <span className="material-symbols-outlined text-lg">
+                    {item.icon}
+                  </span>
+                </span>
+                <div className="min-w-0">
+                  <p className="text-[10px] font-black uppercase tracking-wider text-[#648770]">
+                    {item.label}
                   </p>
-                  <p className="font-black text-[#111713]">{grade}</p>
-                </div>
-
-                <div className="bg-white border border-[#e0e8e3] rounded-2xl p-4 shadow-sm">
-                  <p className="text-[11px] font-black uppercase tracking-wider text-[#648770] mb-1">
-                    Packaging
-                  </p>
-                  <p className="font-black text-[#111713]">
-                    {formatPackaging((product as any).packaging)}
+                  <p
+                    className="truncate text-sm font-black text-[#111713]"
+                    title={item.value}
+                  >
+                    {item.value}
                   </p>
                 </div>
               </div>
+            ))}
+          </section>
 
-              {/* About */}
-              <div className="mt-6">
-                <h3 className="text-xl font-black text-[#111713] mb-2">
-                  About the Produce
-                </h3>
-                <p className="text-[#648770] font-medium leading-7 max-w-2xl">
-                  Premium quality produce sourced from verified partners. Consistent grading and reliable delivery for B2B customers.
+          {/* Price overview and preview */}
+          <section className="mt-5 grid gap-5 xl:grid-cols-2">
+            <div className="rounded-[26px] border border-[#dde8e1] bg-white p-5 shadow-[0_8px_28px_rgba(17,23,19,0.045)] sm:p-6">
+              <div className="mb-5 flex items-center gap-2">
+                <span className="material-symbols-outlined text-[#078a36]">
+                  analytics
+                </span>
+                <h2 className="text-xl font-black text-[#111713]">
+                  Market Price Overview
+                </h2>
+                <span className="text-sm font-medium text-[#648770]">
+                  (Al Aweer)
+                </span>
+              </div>
+
+              <div className="grid gap-3 sm:grid-cols-3">
+                {[
+                  {
+                    label: "Current Price",
+                    value: formatPrice(marketOverview.current),
+                    tone: "text-[#078a36]",
+                  },
+                  {
+                    label: "Previous Price",
+                    value: formatPrice(marketOverview.previous),
+                    tone: "text-[#111713]",
+                  },
+                  {
+                    label: "Highest Price",
+                    value: formatPrice(marketOverview.highest),
+                    tone: "text-[#d12f2f]",
+                  },
+                  {
+                    label: "Lowest Price",
+                    value: formatPrice(marketOverview.lowest),
+                    tone: "text-[#1467d4]",
+                  },
+                  {
+                    label: "Average Price",
+                    value: formatPrice(marketOverview.average),
+                    tone: "text-[#078a36]",
+                  },
+                  {
+                    label: "Median Price",
+                    value: formatPrice(marketOverview.median),
+                    tone: "text-[#6b21a8]",
+                  },
+                ].map((stat) => (
+                  <div
+                    key={stat.label}
+                    className="rounded-2xl border border-[#e1e9e4] bg-[#fcfdfc] p-4"
+                  >
+                    <p className="text-[10px] font-black uppercase tracking-wider text-[#648770]">
+                      {stat.label}
+                    </p>
+                    <p className={`mt-2 text-lg font-black ${stat.tone}`}>
+                      {stat.value}
+                    </p>
+                  </div>
+                ))}
+              </div>
+
+              <div className="mt-3 grid gap-3 sm:grid-cols-[0.8fr_1.7fr]">
+                <div className="flex items-center gap-3 rounded-2xl border border-[#e1e9e4] bg-[#fcfdfc] p-4">
+                  <span className="flex h-10 w-10 items-center justify-center rounded-full bg-[#fff1e7] text-[#ec6b19]">
+                    <span className="material-symbols-outlined">
+                      data_exploration
+                    </span>
+                  </span>
+                  <div>
+                    <p className="text-[10px] font-black uppercase tracking-wider text-[#648770]">
+                      Total Updates
+                    </p>
+                    <p className="text-lg font-black text-[#111713]">
+                      {marketOverview.updates}
+                    </p>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-3 rounded-2xl border border-[#e1e9e4] bg-[#fcfdfc] p-4">
+                  <span className="flex h-10 w-10 items-center justify-center rounded-full bg-[#edf8f1] text-[#078a36]">
+                    <span className="material-symbols-outlined">
+                      calendar_month
+                    </span>
+                  </span>
+                  <div className="min-w-0">
+                    <p className="text-[10px] font-black uppercase tracking-wider text-[#648770]">
+                      Visible Period
+                    </p>
+                    <p className="truncate text-base font-black text-[#111713]">
+                      {marketOverview.from
+                        ? `${formatShortDate(marketOverview.from)} – ${formatShortDate(
+                            marketOverview.to,
+                          )}`
+                        : "Price history will appear here"}
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div className="flex flex-col rounded-[26px] border border-[#dde8e1] bg-white p-5 shadow-[0_8px_28px_rgba(17,23,19,0.045)] sm:p-6">
+              <div className="mb-4 flex items-center justify-between">
+                <div>
+                  <h2 className="text-xl font-black text-[#111713]">
+                    Price Trend Preview
+                  </h2>
+                  <p className="text-sm font-medium text-[#648770]">
+                    Last 1 year • Real Al Aweer history
+                  </p>
+                </div>
+                <span className="flex h-9 w-9 items-center justify-center rounded-full bg-[#edf8f1] text-[#078a36]">
+                  <span className="material-symbols-outlined text-xl">
+                    monitoring
+                  </span>
+                </span>
+              </div>
+
+              <button
+                type="button"
+                onClick={openTrendPageFast}
+                className={[
+  "group relative flex-1 overflow-hidden rounded-2xl border border-[#e1e9e4] bg-gradient-to-b from-white to-[#f7fbf8] text-left",
+  sparklinePath ? "min-h-[230px]" : "min-h-[150px]",
+].join(" ")}
+                title="Open detailed price analysis"
+              >
+                {sparklinePath ? (
+                  <svg
+                    viewBox="0 0 520 180"
+                    preserveAspectRatio="none"
+                    className="absolute inset-x-5 bottom-10 top-5 h-[calc(100%-60px)] w-[calc(100%-40px)]"
+                    aria-hidden="true"
+                  >
+                    <defs>
+                      <linearGradient
+                        id="premiumTrendFill"
+                        x1="0"
+                        y1="0"
+                        x2="0"
+                        y2="1"
+                      >
+                        <stop offset="0%" stopColor="#0c9a40" stopOpacity="0.22" />
+                        <stop offset="100%" stopColor="#0c9a40" stopOpacity="0" />
+                      </linearGradient>
+                    </defs>
+                    <path
+                      d={`${sparklinePath} L 520 180 L 0 180 Z`}
+                      fill="url(#premiumTrendFill)"
+                    />
+                    <path
+                      d={sparklinePath}
+                      fill="none"
+                      stroke="#078a36"
+                      strokeWidth="4"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    />
+                  </svg>
+                ) : (
+              <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 px-6 text-center">
+  <span className="flex h-12 w-12 items-center justify-center rounded-full bg-[#edf8f1] text-[#078a36]">
+    <span className="material-symbols-outlined">monitoring</span>
+  </span>
+
+  <p className="font-black text-[#111713]">
+    Market history will appear here
+  </p>
+
+  <p className="max-w-xs text-sm font-medium text-[#648770]">
+    Historical prices will be shown after more Al Aweer updates are available.
+  </p>
+</div>
+                )}
+
+               {sparklinePath && (
+  <div className="absolute bottom-3 left-4 right-4 flex justify-between text-[10px] font-bold text-[#648770]">
+    <span>{formatShortDate(marketOverview.from)}</span>
+    <span>{formatShortDate(marketOverview.to)}</span>
+  </div>
+)}
+              </button>
+
+              <p className="mt-3 text-center text-xs font-medium text-[#648770]">
+                View the full interactive chart with detailed market insights
+              </p>
+
+              <button
+                type="button"
+                onClick={openTrendPageFast}
+                className="mt-3 flex min-h-12 items-center justify-center gap-2 rounded-xl border border-[#078a36] bg-white font-black text-[#078a36] transition hover:bg-[#effaf3]"
+              >
+                <span className="material-symbols-outlined">
+                  monitoring
+                </span>
+                Open Detailed Price Analysis
+              </button>
+            </div>
+          </section>
+
+          {/* Product details and benefits */}
+          <section className="mt-5 grid gap-5 lg:grid-cols-2">
+            <div className="relative overflow-hidden rounded-[26px] border border-[#dde8e1] bg-white p-6 shadow-[0_8px_28px_rgba(17,23,19,0.045)]">
+              <span className="pointer-events-none absolute -bottom-10 -right-6 text-[170px] text-[#edf8f1]">
+                <span className="material-symbols-outlined text-[170px]">
+                  eco
+                </span>
+              </span>
+
+              <div className="relative">
+                <div className="flex items-center gap-2">
+                  <span className="material-symbols-outlined text-[#078a36]">
+                    eco
+                  </span>
+                  <h2 className="text-xl font-black text-[#111713]">
+                    About the Product
+                  </h2>
+                </div>
+
+                <p className="mt-3 max-w-2xl text-sm leading-6 text-[#4f6f5c]">
+                  {title} is selected for consistent quality, dependable
+                  grading and reliable supply. It is suitable for restaurants,
+                  groceries, resellers and other B2B customers who need clear
+                  market information before purchasing.
                 </p>
+
+                <div className="mt-5 space-y-3">
+                  {qualityPoints.map((point) => (
+                    <div
+                      key={point}
+                      className="flex items-start gap-3 text-sm font-medium text-[#33443a]"
+                    >
+                      <span className="material-symbols-outlined mt-0.5 text-[18px] text-[#078a36]">
+                        check_circle
+                      </span>
+                      <span>{point}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            <div className="rounded-[26px] border border-[#dde8e1] bg-white p-6 shadow-[0_8px_28px_rgba(17,23,19,0.045)]">
+              <div className="flex items-center gap-2">
+                <span className="material-symbols-outlined text-[#078a36]">
+                  shield
+                </span>
+                <h2 className="text-xl font-black text-[#111713]">
+                  Why Source from MyVegmarket?
+                </h2>
               </div>
 
-              {/* Support Actions */}
-              <div className="mt-8 flex flex-col sm:flex-row gap-4">
+              <div className="mt-5 grid gap-5 sm:grid-cols-2">
+                {sourceBenefits.map((benefit) => (
+                  <div key={benefit.title} className="flex gap-3">
+                    <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-[#edf8f1] text-[#078a36]">
+                      <span className="material-symbols-outlined">
+                        {benefit.icon}
+                      </span>
+                    </span>
+                    <div>
+                      <h3 className="text-sm font-black text-[#078a36]">
+                        {benefit.title}
+                      </h3>
+                      <p className="mt-1 text-sm leading-6 text-[#4f6f5c]">
+                        {benefit.text}
+                      </p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </section>
+
+          {/* Bulk enquiry */}
+          <section className="mt-5 overflow-hidden rounded-[28px] border border-[#d9e9df] bg-gradient-to-r from-[#f0faf4] via-white to-[#edf8f1] p-4 shadow-[0_8px_28px_rgba(17,23,19,0.045)] sm:p-5">
+            <div className="grid items-center gap-6 lg:grid-cols-[0.8fr_1.3fr_0.9fr]">
+            <div className="relative flex min-h-[120px] items-center justify-center">
+                <div className="absolute h-36 w-36 rounded-full bg-[#dff4e7]" />
+                <img
+                  src={productImage}
+                  alt={`${title} bulk supply`}
+                  className="relative h-28 w-full object-contain drop-shadow-lg"
+                />
+              </div>
+
+              <div>
+                <h2 className="text-2xl font-black tracking-[-0.03em] text-[#111713]">
+                  Need {title} in bulk?
+                </h2>
+                <p className="mt-2 max-w-xl text-base leading-7 text-[#4f6f5c]">
+                  Get current market guidance and sourcing support for your
+                  restaurant, grocery, resale or export requirement.
+                </p>
+
+                <div className="mt-4 flex flex-wrap gap-x-5 gap-y-2 text-xs font-bold text-[#315f45]">
+                  {["Daily Price Updates", "Best Market Rates", "Sourcing Support"].map(
+                    (item) => (
+                      <span key={item} className="flex items-center gap-1.5">
+                        <span className="material-symbols-outlined text-[17px] text-[#078a36]">
+                          check_circle
+                        </span>
+                        {item}
+                      </span>
+                    ),
+                  )}
+                </div>
+              </div>
+
+              <div className="grid gap-3">
                 <button
                   type="button"
                   onClick={onWhatsAppSupport}
-                  className="flex-1 bg-[#1db954] text-white font-black py-4 rounded-full flex items-center justify-center gap-3 shadow-lg shadow-[#1db954]/20 hover:scale-[1.01] transition-transform active:scale-95"
+                  className="flex min-h-14 items-center justify-center gap-3 rounded-xl bg-gradient-to-r from-[#078a36] to-[#0ca443] px-6 font-black text-white shadow-lg shadow-[#078a36]/20 transition hover:-translate-y-0.5"
                 >
-                  <span className="material-symbols-outlined">support_agent</span>
+                  <span className="material-symbols-outlined">chat</span>
                   WhatsApp Support
                 </button>
 
                 <button
                   type="button"
                   onClick={onCallSupport}
-                  className="flex-1 bg-white border border-[#1db954] text-[#1db954] font-black py-4 rounded-full flex items-center justify-center gap-3 hover:bg-[#1db954]/5 transition-colors"
+                  className="flex min-h-14 items-center justify-center gap-3 rounded-xl border border-[#078a36] bg-white px-6 font-black text-[#078a36] transition hover:bg-[#effaf3]"
                 >
                   <span className="material-symbols-outlined">call</span>
                   Call Support
                 </button>
               </div>
             </div>
-          </div>
+          </section>
 
           {!isAlAweerLite && (
-            <section className="mt-16 p-8 rounded-[30px] bg-[#edf4ef] border border-[#1db954]/10">
-              <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
+            <section className="mt-5 rounded-[26px] border border-[#dde8e1] bg-white p-6 shadow-[0_8px_28px_rgba(17,23,19,0.045)]">
+              <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                 <div>
-                  <h2 className="text-2xl font-black mb-2 text-[#111713]">
-                    Bulk Purchase Options
+                  <h2 className="text-xl font-black text-[#111713]">
+                    Looking for a custom quantity?
                   </h2>
-                  <p className="text-[#648770] font-medium">
-                    Are you a restaurant or hotel? Get tiered pricing for orders above 50kg.
+                  <p className="mt-1 text-sm font-medium text-[#648770]">
+                    Send your quantity, packaging and delivery requirement to
+                    our sourcing team.
                   </p>
                 </div>
-
-                <button className="bg-[#111713] text-white font-black px-8 py-3 rounded-full flex items-center gap-2 hover:opacity-90">
-                  <span className="material-symbols-outlined">request_quote</span>
+                <button
+                  type="button"
+                  onClick={onWhatsAppSupport}
+                  className="flex min-h-12 items-center justify-center gap-2 rounded-xl bg-[#111713] px-6 font-black text-white transition hover:opacity-90"
+                >
+                  <span className="material-symbols-outlined">
+                    request_quote
+                  </span>
                   Request Quote
                 </button>
-              </div>
-
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-8">
-                <div className="text-center p-4">
-                  <p className="text-xs text-[#648770] font-black uppercase">10 - 50 KG</p>
-                  <p className="text-lg font-black text-[#1db954]">AED 11.50</p>
-                </div>
-
-                <div className="text-center p-4 border-l border-[#d7e3dc]">
-                  <p className="text-xs text-[#648770] font-black uppercase">50 - 200 KG</p>
-                  <p className="text-lg font-black text-[#1db954]">AED 10.75</p>
-                </div>
-
-                <div className="text-center p-4 border-l border-[#d7e3dc]">
-                  <p className="text-xs text-[#648770] font-black uppercase">200 - 500 KG</p>
-                  <p className="text-lg font-black text-[#1db954]">AED 10.00</p>
-                </div>
-
-                <div className="text-center p-4 border-l border-[#d7e3dc]">
-                  <p className="text-xs text-[#648770] font-black uppercase">500+ KG</p>
-                  <p className="text-lg font-black text-[#1db954]">Custom</p>
-                </div>
               </div>
             </section>
           )}
